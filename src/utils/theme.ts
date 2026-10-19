@@ -11,7 +11,7 @@ export const defaultThemes: ThemeConfig[] = [
     mobileBackgroundImageUrl: '/spooky_kitchen_bg.webp',
     surfaceColor: 'rgba(31, 31, 31, 0.8)',
     textColor: '#E5E7EB',
-    fontFamily: '"Creepster", "Assistant", system-ui, sans-serif'
+    fontFamily: '"Creepster", "Rubik Wet Paint", "Assistant", system-ui, sans-serif'
   },
   {
     id: 'classic',

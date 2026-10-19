@@ -336,6 +336,7 @@ export default function GuestCardModal({
                 />
                 <KeyRound size={16} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
               </div>
+              <p className="text-[11px] text-gray-400 mt-1">בני אותו משק בית יכולים להשתמש בקודים זה של זה.</p>
             </div>
 
             <div className="sm:col-span-2">

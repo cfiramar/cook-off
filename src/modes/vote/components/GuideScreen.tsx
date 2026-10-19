@@ -30,6 +30,9 @@ export default function GuideScreen({ onNext }: Props) {
               <p className="text-base sm:text-lg leading-snug">
                 התחברו למערכת: חפשו את שמכם, והזינו את <strong className="text-theme-primary">4 הספרות האחרונות</strong> של מספר הטלפון שלכם.
               </p>
+              <p className="text-xs sm:text-sm text-gray-300/90 mt-1.5 font-normal">
+                💡 <span className="text-amber-300 font-medium">טיפ:</span> בני אותו משק בית יכולים להתחבר באמצעות הקוד של כל אחד מבני הבית.
+              </p>
             </div>
           </motion.div>
 

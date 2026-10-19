@@ -191,7 +191,7 @@ export default function SingleGuestModal({
                 PIN אקראי
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-1">קוד זה ישמש את האורח להתחברות ולהצבעה באירוע.</p>
+            <p className="text-[11px] text-gray-400 mt-1">קוד זה ישמש את האורח להתחברות ולהצבעה באירוע (בני אותו משק בית יכולים להשתמש גם בקודים זה של זה).</p>
           </div>
 
           {/* Household Assignment */}

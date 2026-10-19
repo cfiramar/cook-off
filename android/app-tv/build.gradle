@@ -3,8 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-def appVersionCode = project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 2
-def appVersionName = project.hasProperty('versionName') ? project.property('versionName').toString() : "1.0.2"
+def appVersionCode = project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 3
+def appVersionName = project.hasProperty('versionName') ? project.property('versionName').toString() : "1.0.3"
 
 android {
     namespace 'com.cookoff.tv'

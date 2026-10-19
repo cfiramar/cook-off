@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
@@ -20,6 +22,10 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import java.util.concurrent.Executor
 
 class MainActivity : AppCompatActivity() {
 
@@ -79,7 +85,9 @@ class MainActivity : AppCompatActivity() {
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
-        settings.userAgentString = "${settings.userAgentString} CookOffHost/1.0"
+        val nativeBridge = HostAppNativeInterface()
+        webView.addJavascriptInterface(nativeBridge, "HostNativeApp")
+        webView.addJavascriptInterface(nativeBridge, "AndroidHostApp")
 
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
@@ -174,6 +182,103 @@ class MainActivity : AppCompatActivity() {
         })
 
         webView.loadUrl(targetUrl)
+    }
+
+    inner class HostAppNativeInterface {
+        @JavascriptInterface
+        fun isBiometricAvailable(): Boolean {
+            return try {
+                val biometricManager = BiometricManager.from(this@MainActivity)
+                val authenticators = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                } else {
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG
+                }
+                val canAuth = biometricManager.canAuthenticate(authenticators)
+                canAuth == BiometricManager.BIOMETRIC_SUCCESS
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+        @JavascriptInterface
+        fun authenticateBiometrics() {
+            runOnUiThread {
+                showBiometricPrompt()
+            }
+        }
+
+        @JavascriptInterface
+        fun authenticateBiometric() {
+            authenticateBiometrics()
+        }
+    }
+
+    private fun showBiometricPrompt() {
+        try {
+            val executor: Executor = ContextCompat.getMainExecutor(this)
+            val biometricPrompt = BiometricPrompt(this, executor,
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        val errorText = if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                            errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                            errorCode == BiometricPrompt.ERROR_CANCELED
+                        ) {
+                            "האימות בוטל"
+                        } else {
+                            errString.toString()
+                        }
+                        notifyWebBiometricResult(false, errorText)
+                    }
+
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        notifyWebBiometricResult(true, null)
+                    }
+
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                    }
+                })
+
+            val promptBuilder = BiometricPrompt.PromptInfo.Builder()
+                .setTitle("אימות כניסה למארח")
+                .setSubtitle("הנח אצבע על חיישן טביעת האצבע או השתמש בנעילת המכשיר")
+
+            val biometricManager = BiometricManager.from(this)
+            val canWithDeviceCred = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                biometricManager.canAuthenticate(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                ) == BiometricManager.BIOMETRIC_SUCCESS
+            } else {
+                false
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && canWithDeviceCred) {
+                promptBuilder.setAllowedAuthenticators(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                )
+            } else {
+                promptBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                promptBuilder.setNegativeButtonText("ביטול")
+            }
+
+            biometricPrompt.authenticate(promptBuilder.build())
+        } catch (e: Exception) {
+            val safeErr = e.message ?: "שגיאה בהפעלת אימות ביומטרי"
+            notifyWebBiometricResult(false, safeErr)
+        }
+    }
+
+    private fun notifyWebBiometricResult(success: Boolean, errorMessage: String?) {
+        val safeMsg = errorMessage?.replace("\\", "\\\\")?.replace("\"", "\\\"")?.replace("\n", " ") ?: ""
+        val script = if (success) {
+            "if (window.onHostNativeBiometricResult) window.onHostNativeBiometricResult(true, null); if (window.onHostBiometricSuccess) window.onHostBiometricSuccess();"
+        } else {
+            "if (window.onHostNativeBiometricResult) window.onHostNativeBiometricResult(false, \"$safeMsg\"); if (window.onHostBiometricError) window.onHostBiometricError(\"$safeMsg\");"
+        }
+        webView.evaluateJavascript(script, null)
     }
 
     private fun showError() {

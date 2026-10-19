@@ -9,7 +9,7 @@
     --theme-secondary-hover: #4C1D95;
     --theme-bg: #0F0F0F;
     --theme-surface: rgba(31, 31, 31, 0.8);
-    --theme-font: "Creepster", system-ui, sans-serif;
+    --theme-font: "Creepster", "Rubik Wet Paint", system-ui, sans-serif;
     --theme-text: #E5E7EB;
   }
 
@@ -38,6 +38,7 @@
   --color-theme-surface: var(--theme-surface);
   
   --font-theme-main: var(--theme-font);
+  --font-rubik-wet-paint: "Rubik Wet Paint", system-ui, sans-serif;
   --font-assistant: "Assistant", sans-serif;
   --font-sans: "Assistant", "Heebo", "Rubik", "Inter", ui-sans-serif, system-ui, sans-serif;
 }

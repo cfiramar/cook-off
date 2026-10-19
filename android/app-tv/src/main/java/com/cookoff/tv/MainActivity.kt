@@ -15,6 +15,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -23,9 +24,12 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private lateinit var errorLayout: LinearLayout
     private lateinit var retryButton: Button
+    private lateinit var splashLayout: FrameLayout
 
     private val targetUrl = "https://cook-off-contest.web.app/view"
     private var lastBackPressTime = 0L
+    private var loadStartTime = 0L
+    private var splashDismissed = false
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,9 +41,24 @@ class MainActivity : Activity() {
         // Enable immersive full screen
         hideSystemUI()
 
+        loadStartTime = System.currentTimeMillis()
+
         val rootLayout = FrameLayout(this).apply {
             setBackgroundColor(Color.parseColor("#030712"))
         }
+
+        splashLayout = FrameLayout(this).apply {
+            setBackgroundColor(Color.parseColor("#030712"))
+        }
+
+        val splashIcon = ImageView(this).apply {
+            setImageResource(R.mipmap.ic_launcher)
+            val iconSize = (160 * resources.displayMetrics.density).toInt()
+            layoutParams = FrameLayout.LayoutParams(iconSize, iconSize).apply {
+                gravity = android.view.Gravity.CENTER
+            }
+        }
+        splashLayout.addView(splashIcon)
 
         webView = WebView(this).apply {
             setBackgroundColor(Color.parseColor("#030712"))
@@ -72,6 +91,7 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 errorLayout.visibility = View.GONE
                 webView.visibility = View.VISIBLE
+                dismissSplash()
             }
         }
 
@@ -116,12 +136,29 @@ class MainActivity : Activity() {
 
         rootLayout.addView(webView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         rootLayout.addView(errorLayout, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        rootLayout.addView(splashLayout, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
 
         setContentView(rootLayout)
         webView.loadUrl(targetUrl)
     }
 
+    private fun dismissSplash() {
+        if (splashDismissed) return
+        splashDismissed = true
+        val elapsed = System.currentTimeMillis() - loadStartTime
+        val remainingDelay = (1000L - elapsed).coerceAtLeast(0L)
+        splashLayout.postDelayed({
+            splashLayout.animate()
+                .alpha(0f)
+                .setDuration(600)
+                .withEndAction {
+                    splashLayout.visibility = View.GONE
+                }
+        }, remainingDelay)
+    }
+
     private fun showError() {
+        dismissSplash()
         webView.visibility = View.GONE
         errorLayout.visibility = View.VISIBLE
         retryButton.requestFocus()

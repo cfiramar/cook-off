@@ -4,7 +4,13 @@ import type { Guest } from '../../../hooks/useFirebaseData';
 import { motion } from 'framer-motion';
 import PinPad from '../../../components/ui/PinPad';
 import { usePopup } from '../../../components/ui/PopupProvider';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Users } from 'lucide-react';
+import {
+  isGuestPinValid,
+  getValidPinsForGuest,
+  getHouseholdSiblings,
+  getLoginHintText
+} from '../../../utils/householdPinAuth';
 
 interface Props {
   guests: Guest[];
@@ -33,9 +39,15 @@ export default function LoginScreen({ guests, onLogin }: Props) {
     return fuse.search(searchTerm).map(result => result.item);
   }, [searchTerm, fuse]);
 
+  const selectedGuestSiblings = useMemo(
+    () => (selectedGuest ? getHouseholdSiblings(selectedGuest, guests) : []),
+    [selectedGuest, guests]
+  );
+
   const handleGuestSelect = (guest: Guest) => {
-    // If the guest doesn't have a PIN (for backward compatibility), login directly
-    if (!guest.pin) {
+    const validPins = getValidPinsForGuest(guest, guests);
+    // If neither the guest nor anyone in their household has a PIN, login directly
+    if (validPins.size === 0) {
       onLogin(guest.id);
     } else {
       setSelectedGuest(guest);
@@ -45,11 +57,18 @@ export default function LoginScreen({ guests, onLogin }: Props) {
   };
 
   const handlePinComplete = (completedPin: string) => {
-    if (selectedGuest && completedPin === selectedGuest.pin) {
+    if (!selectedGuest) return;
+
+    if (isGuestPinValid(completedPin, selectedGuest, guests)) {
       onLogin(selectedGuest.id);
     } else {
       setIsError(true);
-      showAlert('קוד שגוי, אנא נסו שנית');
+      const siblings = getHouseholdSiblings(selectedGuest, guests);
+      showAlert(
+        siblings.length > 0
+          ? 'קוד שגוי, אנא נסו שנית (ניתן להשתמש גם בקוד של בן/בת הזוג או בני הבית)'
+          : 'קוד שגוי, אנא נסו שנית'
+      );
       setTimeout(() => {
         setPin('');
         setIsError(false);
@@ -89,6 +108,16 @@ export default function LoginScreen({ guests, onLogin }: Props) {
           <p className="text-xs sm:text-sm text-gray-300 font-medium tracking-wide mt-0.5">
             הקלידו 4 ספרות קוד אישי
           </p>
+          {selectedGuestSiblings.length > 0 && (
+            <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-amber-300 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm shadow-xs">
+              <Users size={12} className="shrink-0" />
+              <span>
+                {selectedGuestSiblings.length === 1
+                  ? `אפשר גם להזין את הקוד של ${selectedGuestSiblings[0].name}`
+                  : 'אפשר גם להזין קוד של כל אחד מבני הבית'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Center: Modern Glassmorphic PinPad */}
@@ -106,7 +135,7 @@ export default function LoginScreen({ guests, onLogin }: Props) {
         {/* Bottom Modern Hint Pill */}
         <div className="w-full shrink-0 pb-2 text-center">
           <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/10 text-[11px] sm:text-xs text-gray-300 shadow-md">
-            <span>4 ספרות אחרונות של הטלפון</span>
+            <span>{getLoginHintText(selectedGuest, guests)}</span>
           </div>
         </div>
       </div>

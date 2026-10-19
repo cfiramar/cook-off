@@ -32,104 +32,19 @@ import {
   Fingerprint,
   Sun,
   Moon,
-  KeyRound
+  KeyRound,
+  RefreshCw
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePopup } from '../../components/ui/PopupProvider';
 import PinPad from '../../components/ui/PinPad';
 import GuestManager from '../plan/components/GuestManager';
 import { getOrderedChefNamesForMeal } from '../../utils/mealChefOrder';
+import { DeviceBiometricService } from '../../utils/deviceBiometricsAuth';
+import AppUpdateModal, { APP_CURRENT_VERSION } from '../../components/ui/AppUpdateModal';
 
 type TabType = 'cockpit' | 'voters' | 'results' | 'tools';
 type VoterFilterType = 'all' | 'pending' | 'done';
-
-/**
- * Triggers native device authentication (Fingerprint, FaceID, Windows Hello, Screen Lock)
- * using WebAuthn without storing any sensitive biometric data on a server.
- */
-async function authenticateDeviceBiometrics(): Promise<{ success: boolean; error?: string }> {
-  try {
-    if (!window.PublicKeyCredential) {
-      return { success: false, error: 'WebAuthn אינו נתמך בדפדפן זה' };
-    }
-
-    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    if (!available) {
-      return { success: false, error: 'לא זוהה מנגנון נעילה ביומטרי/מכשיר פעיל' };
-    }
-
-    const challenge = new Uint8Array(32);
-    window.crypto.getRandomValues(challenge);
-
-    const storedId = localStorage.getItem('cookoff_device_cred_id');
-    if (storedId) {
-      try {
-        const rawId = Uint8Array.from(atob(storedId), c => c.charCodeAt(0));
-        const assertion = await navigator.credentials.get({
-          publicKey: {
-            challenge,
-            allowCredentials: [{
-              id: rawId,
-              type: 'public-key',
-              transports: ['internal']
-            }],
-            userVerification: 'required',
-            timeout: 60000
-          }
-        });
-        if (assertion) return { success: true };
-      } catch (err: any) {
-        if (err.name === 'NotAllowedError') {
-          return { success: false, error: 'האימות בוטל' };
-        }
-        localStorage.removeItem('cookoff_device_cred_id');
-      }
-    }
-
-    // First time registration of this device's authenticator
-    const userId = new Uint8Array(16);
-    window.crypto.getRandomValues(userId);
-
-    const credential = await navigator.credentials.create({
-      publicKey: {
-        challenge,
-        rp: {
-          name: 'Cook-Off Host',
-          id: window.location.hostname
-        },
-        user: {
-          id: userId,
-          name: 'host_manager',
-          displayName: 'מארח התחרות'
-        },
-        pubKeyCredParams: [
-          { alg: -7, type: 'public-key' },
-          { alg: -257, type: 'public-key' }
-        ],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          userVerification: 'required',
-          residentKey: 'preferred'
-        },
-        timeout: 60000
-      }
-    }) as PublicKeyCredential | null;
-
-    if (credential && credential.rawId) {
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      localStorage.setItem('cookoff_device_cred_id', b64);
-      return { success: true };
-    }
-
-    return { success: false, error: 'לא התקבל אישור מהמכשיר' };
-  } catch (err: any) {
-    console.error('Device auth error:', err);
-    if (err.name === 'NotAllowedError') {
-      return { success: false, error: 'האימות בוטל' };
-    }
-    return { success: false, error: err.message || 'שגיאה באימות מול המכשיר' };
-  }
-}
 
 /**
  * Event selection screen for the host when no specific event is selected,
@@ -139,6 +54,7 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
   const { events, loading, error } = useAllEvents();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'לא נקבע תאריך';
@@ -174,17 +90,32 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
           <span className="font-extrabold text-sm tracking-wide">Cook-Off Host</span>
         </div>
 
-        <button
-          onClick={onToggleTheme}
-          className={`p-2 rounded-xl border transition-colors ${
-            isDarkMode
-              ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
-          }`}
-          title={isDarkMode ? 'מעבר למצב בהיר' : 'מעבר למצב כהה'}
-        >
-          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsUpdateModalOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all transform hover:scale-105 active:scale-95 cursor-pointer ${
+              isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-slate-200 hover:text-white hover:border-slate-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 shadow-xs'
+            }`}
+            title="עדכון אפליקציה"
+          >
+            <RefreshCw size={14} className="text-blue-500 animate-pulse" />
+            <span>עדכן אפליקציה</span>
+          </button>
+
+          <button
+            onClick={onToggleTheme}
+            className={`p-2 rounded-xl border transition-colors ${
+              isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+            }`}
+            title={isDarkMode ? 'מעבר למצב בהיר' : 'מעבר למצב כהה'}
+          >
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        </div>
       </div>
 
       <div className="text-center my-6 z-10">
@@ -276,6 +207,19 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
           ))}
         </div>
       )}
+
+      {/* App Update Modal */}
+      <AppUpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        title="עדכון אפליקציית המארח"
+        currentVersion={APP_CURRENT_VERSION}
+        apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
+        apkName="CookOff-Host-Mobile.apk"
+        apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
+        apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 }
@@ -327,6 +271,7 @@ function HostModeWithEvent({
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [showPinFallback, setShowPinFallback] = useState(false);
   const [pin, setPin] = useState('');
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   
   // Navigation & View states
   const [currentTab, setCurrentTab] = useState<TabType>('cockpit');
@@ -346,10 +291,13 @@ function HostModeWithEvent({
 
 
   // Pure Native Device Authentication (Fingerprint / FaceID / Device Lock)
-  const handleDeviceAuth = useCallback(async () => {
+  const handleDeviceAuth = useCallback(async (resetKey: boolean = false) => {
+    if (resetKey) {
+      DeviceBiometricService.clearStoredCredential();
+    }
     setIsAuthenticating(true);
     setAuthError(null);
-    const res = await authenticateDeviceBiometrics();
+    const res = await DeviceBiometricService.authenticate();
     setIsAuthenticating(false);
     if (res.success) {
       setIsAuthenticated(true);
@@ -709,7 +657,7 @@ function HostModeWithEvent({
           {!showPinFallback ? (
             <div className="w-full space-y-4">
               <button
-                onClick={handleDeviceAuth}
+                onClick={() => handleDeviceAuth(false)}
                 disabled={isAuthenticating}
                 className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-base flex items-center justify-center gap-3 shadow-lg shadow-blue-600/25 active:scale-95 transition-all disabled:opacity-50"
               >
@@ -718,8 +666,21 @@ function HostModeWithEvent({
               </button>
 
               {authError && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs text-center font-medium">
-                  {authError}
+                <div className="space-y-2">
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-xs text-center font-medium">
+                    {authError}
+                  </div>
+                  {DeviceBiometricService.hasStoredCredential() && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeviceAuth(true)}
+                      className={`w-full text-center text-xs underline py-1 transition-colors ${
+                        isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                      }`}
+                    >
+                      איפוס מפתח ורישום מחדש בטביעת אצבע
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -757,10 +718,23 @@ function HostModeWithEvent({
             </div>
           )}
 
-          <div className="flex items-center gap-3 mt-10">
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
+            <button
+              onClick={() => setIsUpdateModalOpen(true)}
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
+                isDarkMode
+                  ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+              }`}
+              title="עדכון אפליקציה"
+            >
+              <RefreshCw size={13} className="text-blue-500 animate-pulse" />
+              <span>עדכן אפליקציה</span>
+            </button>
+
             <button
               onClick={() => navigate('/host')}
-              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors ${
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
                 isDarkMode
                   ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
@@ -772,7 +746,7 @@ function HostModeWithEvent({
 
             <button
               onClick={onToggleTheme}
-              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors ${
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
                 isDarkMode
                   ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
@@ -783,6 +757,19 @@ function HostModeWithEvent({
             </button>
           </div>
         </div>
+
+        {/* App Update Modal */}
+        <AppUpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          title="עדכון אפליקציית המארח"
+          currentVersion={APP_CURRENT_VERSION}
+          apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
+          apkName="CookOff-Host-Mobile.apk"
+          apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
+          apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+          isDarkMode={isDarkMode}
+        />
       </div>
     );
   }
@@ -859,7 +846,7 @@ function HostModeWithEvent({
             {/* Light / Dark Mode Toggle */}
             <button
               onClick={onToggleTheme}
-              className={`p-2 rounded-xl border transition-colors ${
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
                 isDarkMode
                   ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
                   : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
@@ -867,6 +854,19 @@ function HostModeWithEvent({
               title={isDarkMode ? 'מצב בהיר' : 'מצב כהה'}
             >
               {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+
+            {/* Update App */}
+            <button
+              onClick={() => setIsUpdateModalOpen(true)}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                isDarkMode
+                  ? 'bg-slate-900 border-slate-800 text-blue-400 hover:text-white hover:bg-slate-800'
+                  : 'bg-slate-100 border-slate-200 text-blue-600 hover:bg-slate-200'
+              }`}
+              title="עדכון אפליקציה"
+            >
+              <RefreshCw size={17} />
             </button>
 
 
@@ -1628,6 +1628,33 @@ function HostModeWithEvent({
           {currentTab === 'tools' && (
             <div className="space-y-4 animate-in fade-in duration-200">
               
+              {/* App Update Card */}
+              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
+                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw size={20} className="text-blue-500" />
+                    <h3 className="font-extrabold text-lg">עדכון אפליקציה</h3>
+                  </div>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
+                    isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-200'
+                  }`}>
+                    {APP_CURRENT_VERSION}
+                  </span>
+                </div>
+                <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  בדיקת עדכונים ב-GitHub, רענון גרסת Web מהיר (PWA) או הורדת קובץ APK מעודכן למכשיר.
+                </p>
+                <button
+                  onClick={() => setIsUpdateModalOpen(true)}
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <RefreshCw size={16} />
+                  <span>בדוק עדכונים / עדכן אפליקציה</span>
+                </button>
+              </div>
+
               {/* Event Switcher Card */}
               <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
                 isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
@@ -1897,6 +1924,19 @@ function HostModeWithEvent({
             </div>
           </div>
         )}
+
+        {/* App Update Modal */}
+        <AppUpdateModal
+          isOpen={isUpdateModalOpen}
+          onClose={() => setIsUpdateModalOpen(false)}
+          title="עדכון אפליקציית המארח"
+          currentVersion={APP_CURRENT_VERSION}
+          apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
+          apkName="CookOff-Host-Mobile.apk"
+          apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
+          apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+          isDarkMode={isDarkMode}
+        />
 
       </div>
     </div>

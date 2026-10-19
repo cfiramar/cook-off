@@ -1,11 +1,13 @@
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
-import { useFirebaseData } from '../../hooks/useFirebaseData';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
+import { useFirebaseData, type Meal } from '../../hooks/useFirebaseData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getThemeStyles } from '../../utils/theme';
 import { ChefHat, Users, ArrowRight } from 'lucide-react';
 import { buildGallerySchedule, type ScheduledMealSlide } from '../../utils/mealGalleryScheduler';
 import { getOrderedChefNamesForMeal } from '../../utils/mealChefOrder';
+import { isHebrewText, getTextDirection, getTitleFontFamily } from '../../utils/textUtils';
+import ViewSplashOverlay from './components/ViewSplashOverlay';
 
 const formatTime = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
@@ -185,158 +187,226 @@ function FlavorTextRotator() {
 // Persistent in-memory image cache to eliminate network latency between rotations
 const globalImageCache = new Map<string, HTMLImageElement>();
 
-const TITLE_FONT_LEVELS = [
-  'text-2xl md:text-3xl lg:text-4xl', // smaller base font size
-  'text-xl md:text-2xl lg:text-3xl',
-  'text-lg md:text-xl lg:text-2xl',
-  'text-base md:text-lg lg:text-xl',
-  'text-sm md:text-base lg:text-lg',
+const STATIC_VIEW_ASSETS = [
+  '/medal_1st.png',
+  '/medal_2nd.png',
+  '/medal_3rd.png',
+  '/spooky_kitchen_bg.webp',
+  '/spooky_kitchen_bg_low.webp',
+  '/favicon.png',
+  '/icon.png',
 ];
+
+function preloadImage(url?: string): Promise<void> {
+  if (!url || globalImageCache.has(url)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = url;
+    globalImageCache.set(url, img);
+    if (img.complete) {
+      if ('decode' in img) {
+        img.decode().then(resolve).catch(resolve);
+      } else {
+        resolve();
+      }
+      return;
+    }
+    img.onload = () => {
+      if ('decode' in img) {
+        img.decode().then(resolve).catch(resolve);
+      } else {
+        resolve();
+      }
+    };
+    img.onerror = () => resolve();
+  });
+}
 
 interface DynamicTitleProps {
   text: string;
 }
 
 /**
- * Dynamically sizes down the title font size until it fits within 2 lines,
- * preventing any truncation or ellipsis ("...").
+ * Title component that renders Hebrew titles with "Rubik Wet Paint" and adapts
+ * direction (LTR for mostly-English, RTL for Hebrew) without multi-pass font stepping.
  */
 function DynamicTitle({ text }: DynamicTitleProps) {
-  const headingRef = useRef<HTMLHeadingElement | null>(null);
-  const [level, setLevel] = useState(0);
-  const [currentText, setCurrentText] = useState(text);
-
-  // Synchronously reset level during render when text changes
-  if (text !== currentText) {
-    setCurrentText(text);
-    setLevel(0);
-  }
-
-  useLayoutEffect(() => {
-    if (!headingRef.current) return;
-    const el = headingRef.current;
-    
-    // Check if the title exceeds 2 lines:
-    // With WebkitLineClamp: 2, clientHeight is clamped to 2 lines,
-    // whereas scrollHeight reflects the full unclamped height.
-    const isClamped = el.scrollHeight > el.clientHeight + 2;
-
-    if (isClamped && level < TITLE_FONT_LEVELS.length - 1) {
-      setLevel((prev) => prev + 1);
-    }
-  }, [text, level]);
+  const isHebrew = isHebrewText(text);
+  const dir = getTextDirection(text);
 
   return (
     <h2
-      ref={headingRef}
+      dir={dir}
       style={{
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
+        fontFamily: getTitleFontFamily(text),
+        letterSpacing: isHebrew ? '0.05em' : undefined,
       }}
-      className={`${TITLE_FONT_LEVELS[level]} font-theme-main font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)]`}
+      className={`text-3xl md:text-4xl lg:text-5xl font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)] ${
+        dir === 'ltr' ? 'text-left' : 'text-right'
+      }`}
     >
       {text}
     </h2>
   );
 }
 
-const DESC_FONT_LEVELS = [
-  'text-lg md:text-xl lg:text-2xl', // smaller base font size
-  'text-base md:text-lg lg:text-xl',
-  'text-sm md:text-base lg:text-lg',
-  'text-xs md:text-sm lg:text-base'
-];
-
-interface AutoScrollDescriptionProps {
-  text?: string;
+interface MealDetailsContentProps {
+  meal: Meal;
   slideId: string;
   durationMs: number;
   onExtraTimeNeeded: (needed: boolean) => void;
 }
 
 /**
- * Component that auto-sizes description text without trimming.
- * Uses top-alignment (justify-start) when overflowing so top line is 100% visible,
- * steps down font size, and if still overflowing, smoothly scrolls down to reveal
- * all lines with pauses at top and bottom and requests +5s extra slide duration.
+ * Component displaying meal title and description.
+ * Requirement:
+ * 1. The title is NOT at a fixed height; it sits directly above the description.
+ * 2. If the description is short/fitting, the title sits right above the description and
+ *    the block is centered vertically in the available content space.
+ * 3. If the description is too long and requires scrolling animation, the title is placed
+ *    at the upper-limit height, and the description smoothly auto-scrolls down below it.
  */
-function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }: AutoScrollDescriptionProps) {
+function MealDetailsContent({
+  meal,
+  slideId,
+  durationMs,
+  onExtraTimeNeeded,
+}: MealDetailsContentProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLParagraphElement | null>(null);
-  const [level, setLevel] = useState(0);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const descContentRef = useRef<HTMLParagraphElement | null>(null);
   const [overflow, setOverflow] = useState(0);
-  const [currentSlideId, setCurrentSlideId] = useState(slideId);
 
-  // Synchronously reset state during render when slideId changes
-  if (slideId !== currentSlideId) {
-    setCurrentSlideId(slideId);
-    setLevel(0);
-    setOverflow(0);
-  }
+  const checkOverflow = useCallback(() => {
+    if (!meal.description || !containerRef.current || !descContentRef.current) {
+      setOverflow(0);
+      onExtraTimeNeeded(false);
+      return;
+    }
 
-  useLayoutEffect(() => {
-    if (!text || !containerRef.current || !contentRef.current) return;
+    const containerH = containerRef.current.clientHeight;
+    const headerH = headerRef.current ? headerRef.current.offsetHeight : 0;
+    // Spacing between header and description (mb-3 md:mb-4 is ~16px)
+    const availableForDesc = containerH - headerH - 16;
+    const textH = descContentRef.current.scrollHeight;
+    const diff = textH - availableForDesc;
 
-    const containerHeight = containerRef.current.clientHeight;
-    const contentHeight = contentRef.current.scrollHeight;
-    const diff = contentHeight - containerHeight;
-
-    if (diff > 4) {
-      if (level < DESC_FONT_LEVELS.length - 1) {
-        // Step down font size to try to fit
-        setLevel((prev) => prev + 1);
-      } else {
-        // At smallest font size and still overflowing: enable auto-scroll + extra 5s
-        setOverflow(diff + 16);
-        onExtraTimeNeeded(true);
-      }
+    if (diff > 8) {
+      setOverflow(diff + 16);
+      onExtraTimeNeeded(true);
     } else {
       setOverflow(0);
       onExtraTimeNeeded(false);
     }
-  }, [text, level, slideId, onExtraTimeNeeded]);
+  }, [meal.description, onExtraTimeNeeded]);
 
-  if (!text) return null;
+  useLayoutEffect(() => {
+    checkOverflow();
+  }, [checkOverflow, meal.id, slideId]);
 
+  useEffect(() => {
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [checkOverflow]);
+
+  const isScrolling = overflow > 0;
   const durationSec = Math.max(durationMs / 1000, 1);
   const pauseStartRatio = Math.min(0.2, 2.5 / durationSec);
   const pauseEndRatio = Math.max(0.8, (durationSec - 2.5) / durationSec);
+  const dir = getTextDirection(meal.description || meal.name);
 
   return (
     <div
       ref={containerRef}
-      className={`w-full flex-1 min-h-0 relative overflow-hidden flex flex-col my-2 ${
-        overflow > 0 ? 'justify-start' : 'justify-center'
+      dir={dir}
+      className={`w-full flex-1 min-h-0 relative flex flex-col my-auto ${
+        isScrolling ? 'justify-start' : 'justify-center'
       }`}
     >
-      <motion.div
-        key={`${slideId}-${level}-${overflow > 0 ? 'scroll' : 'static'}`}
-        initial={{ y: 0 }}
-        animate={
-          overflow > 0
-            ? { y: [0, 0, -overflow, -overflow] }
-            : { y: 0 }
-        }
-        transition={
-          overflow > 0
-            ? {
-                duration: durationSec,
-                times: [0, pauseStartRatio, pauseEndRatio, 1],
-                ease: 'linear'
-              }
-            : { duration: 0.2 }
-        }
-        className="w-full"
-      >
-        <p
-          ref={contentRef}
-          className={`${DESC_FONT_LEVELS[level]} text-white/95 leading-relaxed font-medium whitespace-pre-line drop-shadow-[0_2px_10px_rgba(0,0,0,1)] py-1`}
+      {/* Header section: Non-participating badge + Title.
+          When scrolling, sits at upper-limit height (justify-start).
+          When short/fitting, sits naturally directly above description (centered via justify-center). */}
+      <div ref={headerRef} className="shrink-0 mb-3 md:mb-4">
+        {meal.isNonParticipating && (
+          <div className="self-start inline-block mb-3 bg-amber-500/90 text-black font-extrabold text-base md:text-xl px-5 py-1.5 rounded-full shadow-lg border border-amber-300 backdrop-blur-md">
+            מחוץ לתחרות
+          </div>
+        )}
+        <DynamicTitle text={meal.name} />
+      </div>
+
+      {/* Description section: fixed comfortable font size */}
+      {meal.description && (
+        <div
+          className={`w-full relative overflow-hidden ${
+            isScrolling ? 'flex-1 min-h-0 flex flex-col justify-start' : 'shrink-0'
+          }`}
         >
-          {text}
-        </p>
-      </motion.div>
+          <motion.div
+            key={`${slideId}-${isScrolling ? 'scroll' : 'static'}`}
+            initial={{ y: 0 }}
+            animate={isScrolling ? { y: [0, 0, -overflow, -overflow] } : { y: 0 }}
+            transition={
+              isScrolling
+                ? {
+                    duration: durationSec,
+                    times: [0, pauseStartRatio, pauseEndRatio, 1],
+                    ease: 'linear',
+                  }
+                : { duration: 0.2 }
+            }
+            className="w-full"
+          >
+            <p
+              ref={descContentRef}
+              className={`text-xl md:text-2xl lg:text-3xl text-white/95 leading-relaxed font-medium whitespace-pre-line drop-shadow-[0_2px_10px_rgba(0,0,0,1)] py-1 ${
+                dir === 'ltr' ? 'text-left' : 'text-right'
+              }`}
+            >
+              {meal.description}
+            </p>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MealChefSection({ attendingChefs }: { attendingChefs: string[] }) {
+  if (attendingChefs.length === 0) return null;
+  const chefsDir = getTextDirection(attendingChefs.join(' '));
+
+  return (
+    <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-2.5 w-full">
+      {/* Chef Hat with two lines on its sides */}
+      <div className="w-full flex items-center gap-3">
+        <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-white/40" />
+        <ChefHat className="text-white w-7 h-7 md:w-8 md:h-8 drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)] shrink-0" />
+        <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-white/40 to-white/40" />
+      </div>
+
+      {/* Chef names below hat, each name unbreakable, centered vertical bar */}
+      <div
+        className="w-full text-center flex flex-wrap items-center justify-center gap-y-1"
+        dir={chefsDir}
+      >
+        {attendingChefs.map((chef, idx) => (
+          <span key={idx} className="inline-flex items-center">
+            {idx > 0 && (
+              <span className="text-white/40 px-3 text-lg select-none" aria-hidden="true">
+                |
+              </span>
+            )}
+            <span className="inline-block whitespace-nowrap text-xl md:text-2xl text-gray-100 font-bold drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-wide">
+              {chef}
+            </span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -352,6 +422,27 @@ export default function ViewMode() {
   const [hasRevealed, setHasRevealed] = useState(false);
   const [dramaticState, setDramaticState] = useState<'none' | 'countdown' | 'ended'>('none');
   const [extraTimeNeeded, setExtraTimeNeeded] = useState(false);
+
+  // Splash screen state (1s minimum display + fade out)
+  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>('holding');
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (minTimeElapsed && !loading && splashPhase === 'holding') {
+      setSplashPhase('fading');
+      const fadeTimer = setTimeout(() => {
+        setSplashPhase('done');
+      }, 600);
+      return () => clearTimeout(fadeTimer);
+    }
+  }, [minTimeElapsed, loading, splashPhase]);
 
   // Handle remote Back button or Escape to return to event selection
   useEffect(() => {
@@ -506,7 +597,23 @@ export default function ViewMode() {
     });
   }, [meals, guests, eventInfo?.timerDuration, eventInfo?.timerStatus]);
 
-  // Persistent memory cache and active ahead-of-time image preloading (current + next 2 slides)
+  // 1. Preload static assets (medals, background, splash) immediately on mount
+  useEffect(() => {
+    STATIC_VIEW_ASSETS.forEach((asset) => preloadImage(asset));
+  }, []);
+
+  // 2. Preload ALL meal images as soon as meals data is available,
+  // even if the gallery is currently OFF (user request #3)
+  useEffect(() => {
+    if (!meals || meals.length === 0) return;
+    meals.forEach((meal) => {
+      if (meal.imageUrl) {
+        preloadImage(meal.imageUrl);
+      }
+    });
+  }, [meals]);
+
+  // 3. Persistent memory cache and active ahead-of-time priority preloading (current + next 2 slides)
   useEffect(() => {
     if (!slides || slides.length === 0) return;
     const preloadIndices = [
@@ -517,15 +624,8 @@ export default function ViewMode() {
     preloadIndices.forEach((idx) => {
       const slide = slides[idx];
       const meal = slide?.meals[0];
-      if (meal?.imageUrl && !globalImageCache.has(meal.imageUrl)) {
-        const img = new Image();
-        img.src = meal.imageUrl;
-        globalImageCache.set(meal.imageUrl, img);
-      }
-      if (meal?.lowResImageUrl && !globalImageCache.has(meal.lowResImageUrl)) {
-        const lowImg = new Image();
-        lowImg.src = meal.lowResImageUrl;
-        globalImageCache.set(meal.lowResImageUrl, lowImg);
+      if (meal?.imageUrl) {
+        preloadImage(meal.imageUrl);
       }
     });
   }, [slides, activeIndex]);
@@ -575,7 +675,7 @@ export default function ViewMode() {
     ? 'אדם 1 עדיין מצביע'
     : `${stillVotingCount} אנשים עדיין מצביעים`;
 
-  if (loading) return <div className="flex-1 flex items-center justify-center h-screen w-screen bg-black text-white overflow-hidden">טוען...</div>;
+  if (loading) return <ViewSplashOverlay isFadingOut={false} />;
 
   if (error || !eventId) {
     return (
@@ -614,6 +714,8 @@ export default function ViewMode() {
     : eventInfo?.showMealsCarousel !== false;
   const shouldShowMeals = isCarouselEnabled && !isRevealing && !isHiddenResults && slides.length > 0;
   const currentSlide = slides[activeIndex] || slides[0];
+  // Alternating sides: even slides show image on left, odd slides show image on right (user request #4)
+  const isImageOnLeft = activeIndex % 2 === 0;
 
   /**
    * Returns sorted names of attending chefs for a meal:
@@ -627,6 +729,9 @@ export default function ViewMode() {
 
   return (
     <div style={containerStyles} className="absolute inset-0 flex flex-col overflow-hidden bg-theme-bg">
+      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out */}
+      {splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
+
       {/* Subtle TV back navigation button (visible on hover or remote focus) */}
       <button
         onClick={() => navigate('/view')}
@@ -712,15 +817,16 @@ export default function ViewMode() {
           )}
         </AnimatePresence>
 
-        {/* Floating Corner Timer & Voter Counter (overlay over both sections, independent of details layout) */}
+        {/* Static Corner Timer & Voter Counter (fixed in top right corner) */}
         <AnimatePresence>
           {shouldShowMeals && meals.length > 0 && eventInfo?.timerStatus === 'running' && dramaticState !== 'countdown' && (
             <motion.div
+              key="static-view-timer-badge"
               initial={{ opacity: 0, scale: 0.9, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="absolute top-6 right-6 md:top-8 md:right-8 z-40 flex items-center gap-4 pointer-events-auto"
+              transition={{ duration: 0.4 }}
+              className="absolute top-6 right-6 md:top-8 md:right-8 z-40 flex items-center gap-4 pointer-events-auto flex-row"
               dir="rtl"
             >
               {timeRemaining !== null && (
@@ -745,114 +851,103 @@ export default function ViewMode() {
           )}
         </AnimatePresence>
 
-        {/* Meal Gallery Display: Single Meal Only (40% Details on Left, 60% Image on Right) */}
-        {shouldShowMeals && currentSlide && currentSlide.meals[0] && (
-          <div className="absolute inset-0 w-full h-full z-10 flex flex-row">
-            {/* Left Column: Meal Details */}
-            <div className="w-[40%] h-full flex flex-col justify-between p-6 md:p-8 pl-2 md:pl-4 z-20" dir="rtl">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="w-full h-full flex flex-col justify-between"
-                >
-                  {/* Top section: Non-participating badge + Title (Pinned) */}
-                  <div className="flex flex-col text-right gap-3 shrink-0">
-                    {currentSlide.meals[0].isNonParticipating && (
-                      <div className="self-start bg-amber-500/90 text-black font-extrabold text-base md:text-xl px-5 py-1.5 rounded-full shadow-lg border border-amber-300 backdrop-blur-md">
-                        מחוץ לתחרות
-                      </div>
-                    )}
-
-                    <DynamicTitle text={currentSlide.meals[0].name} />
+        {/* Meal Gallery Display: Single Meal with Alternating Sides and Unified Fade Transition */}
+        <AnimatePresence mode="wait">
+          {shouldShowMeals && currentSlide && currentSlide.meals[0] && (
+            <motion.div
+              key={currentSlide.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full z-10 flex flex-row"
+              dir="ltr"
+            >
+              {isImageOnLeft ? (
+                <>
+                  {/* Image on Left (60%) */}
+                  <div className="w-[60%] h-full flex items-center justify-center p-4 md:p-6 pl-6 md:pl-10 pr-2 md:pr-4 z-20">
+                    <div className="w-full h-full relative flex items-center justify-center">
+                      <img
+                        src={currentSlide.meals[0].imageUrl}
+                        alt={currentSlide.meals[0].name}
+                        loading="eager"
+                        decoding="async"
+                        className="relative max-w-full max-h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl z-10 transition-opacity duration-500 ease-in-out"
+                      />
+                    </div>
                   </div>
 
-                  {/* Middle section: Auto-sizing and auto-scrolling Description */}
-                  <AutoScrollDescription
-                    text={currentSlide.meals[0].description}
-                    slideId={currentSlide.id}
-                    durationMs={(currentSlide?.durationMs || 15000) + (extraTimeNeeded ? 5000 : 0)}
-                    onExtraTimeNeeded={setExtraTimeNeeded}
-                  />
-
-                  {/* Bottom section: White Chef hat with side lines + unbreakable chef names below */}
-                  {(() => {
-                    const attendingChefs = getAttendingChefs(currentSlide.meals[0]);
-                    if (attendingChefs.length === 0) return null;
-                    return (
-                      <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-2.5 w-full">
-                        {/* Chef Hat with two lines on its sides */}
-                        <div className="w-full flex items-center gap-3">
-                          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-white/40" />
-                          <ChefHat className="text-white w-7 h-7 md:w-8 md:h-8 drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)] shrink-0" />
-                          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-white/40 to-white/40" />
-                        </div>
-
-                        {/* Chef names below hat, each name unbreakable */}
-                        <div className="w-full text-center flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
-                          {attendingChefs.map((chef, idx) => (
-                            <span key={idx} className="inline-flex items-center">
-                              <span className="inline-block whitespace-nowrap text-xl md:text-2xl text-gray-100 font-bold drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-wide">
-                                {chef}
-                              </span>
-                              {idx < attendingChefs.length - 1 && (
-                                <span className="text-white/40 mx-2 text-lg select-none">|</span>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* Right Column: Large Meal Image with tighter padding and progressive loading */}
-            <div className="w-[60%] h-full flex items-center justify-center p-4 md:p-6 pr-2 md:pr-4 z-20">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="w-full h-full relative flex items-center justify-center"
-                >
-                  {currentSlide.meals[0].lowResImageUrl && (
-                    <img
-                      src={currentSlide.meals[0].lowResImageUrl}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute max-w-full max-h-full object-contain filter blur-sm scale-95 opacity-50 pointer-events-none transition-opacity duration-300"
+                  {/* Details on Right (40%) */}
+                  <div
+                    className={`w-[40%] h-full flex flex-col justify-between pb-6 md:pb-8 pr-6 md:pr-10 pl-2 md:pl-4 z-20 ${
+                      eventInfo?.timerStatus === 'running' && dramaticState !== 'countdown' ? 'pt-32 md:pt-36' : 'pt-6 md:pt-8'
+                    }`}
+                    dir={getTextDirection(currentSlide.meals[0].description || currentSlide.meals[0].name)}
+                  >
+                    <MealDetailsContent
+                      meal={currentSlide.meals[0]}
+                      slideId={currentSlide.id}
+                      durationMs={(currentSlide?.durationMs || 15000) + (extraTimeNeeded ? 5000 : 0)}
+                      onExtraTimeNeeded={setExtraTimeNeeded}
                     />
-                  )}
-                  <img
-                    src={currentSlide.meals[0].imageUrl}
-                    alt={currentSlide.meals[0].name}
-                    loading="eager"
-                    decoding="sync"
-                    className="relative max-w-full max-h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl z-10"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
+
+                    <MealChefSection attendingChefs={getAttendingChefs(currentSlide.meals[0])} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Details on Left (40%) */}
+                  <div
+                    className="w-[40%] h-full flex flex-col justify-between p-6 md:p-8 pl-6 md:pl-10 pr-2 md:pr-4 z-20"
+                    dir={getTextDirection(currentSlide.meals[0].description || currentSlide.meals[0].name)}
+                  >
+                    <MealDetailsContent
+                      meal={currentSlide.meals[0]}
+                      slideId={currentSlide.id}
+                      durationMs={(currentSlide?.durationMs || 15000) + (extraTimeNeeded ? 5000 : 0)}
+                      onExtraTimeNeeded={setExtraTimeNeeded}
+                    />
+
+                    <MealChefSection attendingChefs={getAttendingChefs(currentSlide.meals[0])} />
+                  </div>
+
+                  {/* Image on Right (60%) */}
+                  <div className="w-[60%] h-full flex items-center justify-center p-4 md:p-6 pr-6 md:pr-10 pl-2 md:pl-4 z-20">
+                    <div className="w-full h-full relative flex items-center justify-center">
+                      <img
+                        src={currentSlide.meals[0].imageUrl}
+                        alt={currentSlide.meals[0].name}
+                        loading="eager"
+                        decoding="async"
+                        className="relative max-w-full max-h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl z-10 transition-opacity duration-500 ease-in-out"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Centered Timer / Event View when Meals Carousel is Hidden */}
         {!shouldShowMeals && !isRevealing && !showDrumroll && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center" dir="rtl">
+          <div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center p-8 text-center"
+            dir={getTextDirection(eventInfo?.title)}
+          >
             {eventInfo?.timerStatus === 'running' && dramaticState !== 'countdown' ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex flex-col items-center gap-6"
               >
-                <h2 className="text-4xl md:text-6xl font-theme-main text-theme-primary drop-shadow-lg">
+                <h2
+                  style={{
+                    fontFamily: getTitleFontFamily(eventInfo?.title),
+                  }}
+                  className="text-4xl md:text-6xl text-theme-primary drop-shadow-lg"
+                >
                   {eventInfo?.title}
                 </h2>
                 {timeRemaining !== null && (
@@ -881,11 +976,19 @@ export default function ViewMode() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-col items-center gap-4 max-w-3xl"
               >
-                <h1 className="text-6xl md:text-8xl font-theme-main text-theme-primary drop-shadow-2xl">
+                <h1
+                  style={{
+                    fontFamily: getTitleFontFamily(eventInfo?.title),
+                  }}
+                  className="text-6xl md:text-8xl text-theme-primary drop-shadow-2xl"
+                >
                   {eventInfo?.title || 'תחרות בישול'}
                 </h1>
                 {eventInfo?.subtitle && (
-                  <p className="text-2xl md:text-4xl text-gray-300 font-medium leading-relaxed drop-shadow-md">
+                  <p
+                    dir={getTextDirection(eventInfo.subtitle)}
+                    className="text-2xl md:text-4xl text-gray-300 font-medium leading-relaxed drop-shadow-md"
+                  >
                     {eventInfo.subtitle}
                   </p>
                 )}
@@ -928,11 +1031,24 @@ export default function ViewMode() {
                         <img src={top3[1].imageUrl} alt={top3[1].name} className="w-full h-full object-contain drop-shadow-lg" />
                       </div>
                       <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                        <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">{top3[1].name}</h3>
+                        <h3
+                          dir={getTextDirection(top3[1].name)}
+                          style={{
+                            fontFamily: getTitleFontFamily(top3[1].name),
+                          }}
+                          className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight"
+                        >
+                          {top3[1].name}
+                        </h3>
                         {(() => {
                           const chefs = getAttendingChefs(top3[1]);
                           return chefs.length > 0 ? (
-                            <p className="text-white font-semibold mt-2 text-xl md:text-2xl">שפים: {chefs.join(', ')}</p>
+                            <p
+                              dir={getTextDirection(chefs.join(', '))}
+                              className="text-white font-semibold mt-2 text-xl md:text-2xl"
+                            >
+                              שפים: {chefs.join(', ')}
+                            </p>
                           ) : null;
                         })()}
                       </div>
@@ -968,11 +1084,24 @@ export default function ViewMode() {
                         <img src={top3[0].imageUrl} alt={top3[0].name} className="w-full h-full object-contain drop-shadow-lg" />
                       </div>
                       <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                        <h3 className="text-4xl md:text-5xl font-bold text-white mb-2 leading-tight">{top3[0].name}</h3>
+                        <h3
+                          dir={getTextDirection(top3[0].name)}
+                          style={{
+                            fontFamily: getTitleFontFamily(top3[0].name),
+                          }}
+                          className="text-4xl md:text-5xl font-bold text-white mb-2 leading-tight"
+                        >
+                          {top3[0].name}
+                        </h3>
                         {(() => {
                           const chefs = getAttendingChefs(top3[0]);
                           return chefs.length > 0 ? (
-                            <p className="text-white font-semibold mt-4 text-2xl md:text-3xl">שפים: {chefs.join(', ')}</p>
+                            <p
+                              dir={getTextDirection(chefs.join(', '))}
+                              className="text-white font-semibold mt-4 text-2xl md:text-3xl"
+                            >
+                              שפים: {chefs.join(', ')}
+                            </p>
                           ) : null;
                         })()}
                       </div>
@@ -1008,11 +1137,24 @@ export default function ViewMode() {
                         <img src={top3[2].imageUrl} alt={top3[2].name} className="w-full h-full object-contain drop-shadow-lg" />
                       </div>
                       <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-                        <h3 className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight">{top3[2].name}</h3>
+                        <h3
+                          dir={getTextDirection(top3[2].name)}
+                          style={{
+                            fontFamily: getTitleFontFamily(top3[2].name),
+                          }}
+                          className="text-3xl md:text-4xl font-bold text-white mb-2 leading-tight"
+                        >
+                          {top3[2].name}
+                        </h3>
                         {(() => {
                           const chefs = getAttendingChefs(top3[2]);
                           return chefs.length > 0 ? (
-                            <p className="text-white font-semibold mt-2 text-xl md:text-2xl">שפים: {chefs.join(', ')}</p>
+                            <p
+                              dir={getTextDirection(chefs.join(', '))}
+                              className="text-white font-semibold mt-2 text-xl md:text-2xl"
+                            >
+                              שפים: {chefs.join(', ')}
+                            </p>
                           ) : null;
                         })()}
                       </div>

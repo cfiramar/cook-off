@@ -1,34 +1,46 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAllEvents } from '../../hooks/useFirebaseData';
+import ViewSplashOverlay from './components/ViewSplashOverlay';
+import AppUpdateModal, { APP_CURRENT_VERSION } from '../../components/ui/AppUpdateModal';
 import {
   Calendar,
   Tv,
   PlayCircle,
-  RefreshCw,
-  Download,
-  ExternalLink,
-  X,
-  CheckCircle2,
-  AlertCircle
+  RefreshCw
 } from 'lucide-react';
 
 const LAST_EVENT_KEY = 'cookoff_last_tv_event';
-const CURRENT_VERSION = 'v1.0.2';
 
 export default function GeneralViewDashboard() {
   const { events, loading, error } = useAllEvents();
   const navigate = useNavigate();
   const [lastEventId, setLastEventId] = useState<string | null>(null);
   const firstCardRef = useRef<HTMLDivElement | null>(null);
-  const modalCloseRef = useRef<HTMLButtonElement | null>(null);
+
+  // Splash screen state (1s minimum display + fade out)
+  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>('holding');
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinTimeElapsed(true);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (minTimeElapsed && !loading && splashPhase === 'holding') {
+      setSplashPhase('fading');
+      const fadeTimer = setTimeout(() => {
+        setSplashPhase('done');
+      }, 600);
+      return () => clearTimeout(fadeTimer);
+    }
+  }, [minTimeElapsed, loading, splashPhase]);
 
   // App Update Modal State
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const [latestReleaseTag, setLatestReleaseTag] = useState<string | null>(null);
-  const [releaseCheckError, setReleaseCheckError] = useState<string | null>(null);
-  const [isReloading, setIsReloading] = useState(false);
 
   useEffect(() => {
     try {
@@ -43,58 +55,13 @@ export default function GeneralViewDashboard() {
 
   // Auto-focus first card or last visited card when events load for TV remote D-pad navigation
   useEffect(() => {
-    if (!loading && events.length > 0 && !isUpdateModalOpen) {
+    if (!loading && events.length > 0 && !isUpdateModalOpen && splashPhase === 'done') {
       const timer = setTimeout(() => {
         firstCardRef.current?.focus();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, events.length, isUpdateModalOpen]);
-
-  // Focus modal close button when modal opens
-  useEffect(() => {
-    if (isUpdateModalOpen) {
-      const timer = setTimeout(() => {
-        modalCloseRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isUpdateModalOpen]);
-
-  const checkUpdates = async () => {
-    setIsCheckingUpdate(true);
-    setReleaseCheckError(null);
-    try {
-      const res = await fetch('https://api.github.com/repos/cfiramar/cook-off/releases/latest');
-      if (res.ok) {
-        const data = await res.json();
-        setLatestReleaseTag(data.tag_name || null);
-      } else {
-        setReleaseCheckError('לא ניתן לאחזר מידע מ-GitHub (ייתכן שהמאגר פרטי)');
-      }
-    } catch {
-      setReleaseCheckError('שגיאת רשת בבדיקת עדכונים');
-    } finally {
-      setIsCheckingUpdate(false);
-    }
-  };
-
-  const handleForceWebReload = async () => {
-    setIsReloading(true);
-    try {
-      if ('caches' in window) {
-        const cacheKeys = await caches.keys();
-        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
-      }
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((reg) => reg.unregister()));
-      }
-    } catch (e) {
-      console.error('Error clearing cache:', e);
-    }
-    window.location.reload();
-  };
+  }, [loading, events.length, isUpdateModalOpen, splashPhase]);
 
   const selectEvent = (eventId?: string) => {
     if (!eventId) return;
@@ -117,6 +84,9 @@ export default function GeneralViewDashboard() {
 
   return (
     <div className="flex-1 w-full relative bg-gray-950 text-white font-sans h-screen overflow-y-auto admin-scroll select-none">
+      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out */}
+      {splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
+
       {/* Background Ambient Glow */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none"></div>
@@ -134,10 +104,7 @@ export default function GeneralViewDashboard() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => {
-                setIsUpdateModalOpen(true);
-                checkUpdates();
-              }}
+              onClick={() => setIsUpdateModalOpen(true)}
               className="flex items-center gap-2.5 bg-gray-900/90 hover:bg-gray-800 text-gray-200 hover:text-white px-4 py-3 rounded-2xl font-bold border border-gray-700/80 shadow-lg shadow-black/40 transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-400 cursor-pointer"
               title="עדכון אפליקציה"
             >
@@ -239,146 +206,17 @@ export default function GeneralViewDashboard() {
       </div>
 
       {/* App Update Modal */}
-      {isUpdateModalOpen && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="update-modal-title"
-          dir="rtl"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setIsUpdateModalOpen(false);
-            }
-          }}
-        >
-          <div className="bg-gray-900 border border-gray-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative flex flex-col gap-6 text-right">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-blue-500/20 text-blue-400 rounded-2xl border border-blue-500/30">
-                  <RefreshCw className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 id="update-modal-title" className="text-2xl font-bold text-white">עדכון אפליקציה</h2>
-                  <p className="text-gray-400 text-xs sm:text-sm">גרסה נוכחית: {CURRENT_VERSION}</p>
-                </div>
-              </div>
-              <button
-                ref={modalCloseRef}
-                onClick={() => setIsUpdateModalOpen(false)}
-                className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-                aria-label="סגור חלון"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Release Status */}
-            <div className="bg-gray-950/70 border border-gray-800 rounded-2xl p-4 flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                {isCheckingUpdate ? (
-                  <RefreshCw className="w-5 h-5 text-blue-400 animate-spin" />
-                ) : latestReleaseTag ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-gray-400" />
-                )}
-                <div>
-                  <div className="font-semibold text-white">
-                    {isCheckingUpdate
-                      ? 'בודק זמינות עדכונים ב-GitHub...'
-                      : latestReleaseTag
-                      ? `גרסה זמינה ב-GitHub: ${latestReleaseTag}`
-                      : 'בדיקת עדכונים ב-GitHub'}
-                  </div>
-                  {releaseCheckError && (
-                    <div className="text-xs text-gray-400 mt-0.5">{releaseCheckError}</div>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={checkUpdates}
-                disabled={isCheckingUpdate}
-                className="text-xs text-blue-400 hover:text-blue-300 underline font-medium focus:outline-none focus:ring-1 focus:ring-blue-400 p-1 rounded cursor-pointer"
-              >
-                בדוק שוב
-              </button>
-            </div>
-
-            {/* Update options */}
-            <div className="flex flex-col gap-3.5">
-              {/* Option 1: Fast Web Reload (Clears ServiceWorker + Cache Storage) */}
-              <button
-                tabIndex={0}
-                onClick={handleForceWebReload}
-                disabled={isReloading}
-                className="group flex items-start gap-4 p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 hover:from-blue-800/60 hover:to-indigo-800/60 border border-blue-500/40 hover:border-blue-400 text-right transition-all transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-blue-400 cursor-pointer"
-              >
-                <div className="p-3 bg-blue-600/30 text-blue-300 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shrink-0 mt-0.5">
-                  <RefreshCw className={`w-6 h-6 ${isReloading ? 'animate-spin' : ''}`} />
-                </div>
-                <div className="flex-1">
-                  <div className="text-base font-bold text-white flex items-center gap-2">
-                    רענון וטעינת גרסה חדשה (Web)
-                    <span className="bg-emerald-500/20 text-emerald-300 text-[11px] px-2 py-0.5 rounded-full border border-emerald-500/30">
-                      מומלץ
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-300 mt-1 leading-relaxed">
-                    מנקה זיכרון מטמון וטוען את השינויים העדכניים ביותר ישירות מהשרת (מתאים גם לאפליקציית הטלוויזיה).
-                  </div>
-                </div>
-              </button>
-
-              {/* Option 2: Download APK */}
-              <a
-                tabIndex={0}
-                href="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-AndroidTV-ViewMode.apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-start gap-4 p-4 rounded-2xl bg-gray-800/60 hover:bg-gray-800/90 border border-gray-700 hover:border-gray-600 text-right transition-all transform hover:scale-[1.01] focus:outline-none focus:ring-4 focus:ring-blue-400 cursor-pointer"
-              >
-                <div className="p-3 bg-purple-600/20 text-purple-300 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0 mt-0.5">
-                  <Download className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-base font-bold text-white flex items-center gap-2">
-                    הורדת קובץ התקנה לטלוויזיה (APK)
-                    <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    מוריד את קובץ ה-APK המלא (CookOff-AndroidTV-ViewMode.apk) להתקנה על Android TV.
-                  </div>
-                </div>
-              </a>
-
-              {/* Option 3: GitHub Releases page */}
-              <a
-                tabIndex={0}
-                href="https://github.com/cfiramar/cook-off/releases"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-4 py-3 rounded-xl bg-gray-950/40 hover:bg-gray-900 border border-gray-800/80 text-xs text-gray-300 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-              >
-                <span>צפייה בכל הגרסאות ב-GitHub (כולל אפליקציית המנחה)</span>
-                <ExternalLink className="w-4 h-4 text-gray-500" />
-              </a>
-            </div>
-
-            {/* Footer */}
-            <div className="pt-2 flex justify-end">
-              <button
-                tabIndex={0}
-                onClick={() => setIsUpdateModalOpen(false)}
-                className="px-6 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer"
-              >
-                סגור
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AppUpdateModal
+        isOpen={isUpdateModalOpen}
+        onClose={() => setIsUpdateModalOpen(false)}
+        title="עדכון אפליקציית הטלוויזיה"
+        currentVersion={APP_CURRENT_VERSION}
+        apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-AndroidTV-ViewMode.apk"
+        apkName="CookOff-AndroidTV-ViewMode.apk"
+        apkTitle="הורדת קובץ התקנה לטלוויזיה (APK)"
+        apkDescription="מוריד את קובץ ה-APK המלא (CookOff-AndroidTV-ViewMode.apk) להתקנה על Android TV."
+        isDarkMode={true}
+      />
     </div>
   );
 }
