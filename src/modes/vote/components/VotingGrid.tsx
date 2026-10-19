@@ -23,6 +23,21 @@ export default function VotingGrid({ guest, meals, existingVotes, eventId, onLog
   const [timerRemaining, setTimerRemaining] = useState<number | null>(null);
   const { showAlert } = usePopup();
 
+  // Check if voting is open, including 2000ms grace period after timerEndTime
+  const canCastVote = () => {
+    if (!eventInfo) return false;
+    if (eventInfo.timerStatus === 'running') {
+      if (eventInfo.timerEndTime) {
+        return Date.now() <= eventInfo.timerEndTime + 2000;
+      }
+      return true;
+    }
+    if (eventInfo.timerStatus === 'ended' && eventInfo.timerEndTime) {
+      return Date.now() <= eventInfo.timerEndTime + 2000;
+    }
+    return false;
+  };
+
   const isTimerRunning = eventInfo?.timerStatus === 'running';
 
   // Live timer countdown
@@ -127,6 +142,7 @@ export default function VotingGrid({ guest, meals, existingVotes, eventId, onLog
 
   const handleMealClick = (mealId: string) => {
     if (isSubmitting) return; // Prevent spam clicks while syncing
+    if (!canCastVote()) return;
 
     const clickedMeal = meals.find(m => m.id === mealId);
     if (clickedMeal?.isNonParticipating) {
@@ -268,9 +284,9 @@ export default function VotingGrid({ guest, meals, existingVotes, eventId, onLog
                       : ''
                   } ${!isTimerRunning ? 'cursor-pointer hover:scale-[1.01]' : !isVotable ? 'cursor-not-allowed opacity-75' : 'cursor-pointer hover:scale-[1.01]'}`}
                 onClick={() => {
-                  if (!isTimerRunning) {
-                    // Voter can log in and see meals any time, but if timer is not running,
-                    // clicking on a meal opens the info card instead of voting, with no error.
+                  if (!canCastVote()) {
+                    // Voter can log in and see meals any time, but if voting is not active,
+                    // clicking on a meal opens the info card instead of voting.
                     setInfoMeal(meal);
                     return;
                   }

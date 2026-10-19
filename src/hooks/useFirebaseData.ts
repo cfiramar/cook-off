@@ -28,11 +28,12 @@ export interface EventInfo {
   timerStatus: 'idle' | 'running' | 'ended';
   timerEndTime: number | null;
   timerDuration?: number | null;
-  revealState: 'none' | '3rd' | '2nd' | '1st';
+  revealState: 'none' | '3rd' | '2nd' | '1st' | 'emblem' | 'results' | 'background';
   entryFee?: number;
   isFree?: boolean;
   showMealsCarousel?: boolean;
   showFlavorTexts?: boolean;
+  showStage?: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J';
 }
 
 export interface Guest {

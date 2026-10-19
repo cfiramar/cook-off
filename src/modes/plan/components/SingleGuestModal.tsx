@@ -112,12 +112,12 @@ export default function SingleGuestModal({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer" 
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer"
       dir="rtl"
       onClick={handleResetAndClose}
     >
-      <div 
+      <div
         className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden relative border border-gray-100 animate-in zoom-in-95 duration-200 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
@@ -191,7 +191,7 @@ export default function SingleGuestModal({
                 PIN אקראי
               </button>
             </div>
-            <p className="text-[11px] text-gray-400 mt-1">קוד זה ישמש את האורח להתחברות ולהצבעה באירוע (בני אותו משק בית יכולים להשתמש גם בקודים זה של זה).</p>
+            <p className="text-[11px] text-gray-400 mt-1">קוד זה ישמש את האורח להתחברות ולהצבעה באירוע (בני זוג יכולים להשתמש גם בקודים זה של זה).</p>
           </div>
 
           {/* Household Assignment */}
@@ -204,11 +204,10 @@ export default function SingleGuestModal({
               <button
                 type="button"
                 onClick={() => setHouseholdChoice('new')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${
-                  householdChoice === 'new'
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center ${householdChoice === 'new'
                     ? 'bg-blue-50/80 border-blue-300 text-blue-800 shadow-2xs'
                     : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 משק בית עצמאי
               </button>
@@ -216,11 +215,10 @@ export default function SingleGuestModal({
                 type="button"
                 onClick={() => setHouseholdChoice('existing')}
                 disabled={existingHouseholds.length === 0}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center disabled:opacity-40 ${
-                  householdChoice === 'existing'
+                className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center disabled:opacity-40 ${householdChoice === 'existing'
                     ? 'bg-blue-50/80 border-blue-300 text-blue-800 shadow-2xs'
                     : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 שיוך למשק בית קיים
               </button>
@@ -246,11 +244,10 @@ export default function SingleGuestModal({
               <button
                 type="button"
                 onClick={() => setRsvpStatus('coming')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  rsvpStatus === 'coming'
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${rsvpStatus === 'coming'
                     ? 'bg-green-600 text-white border-green-600 shadow-xs'
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <CheckCircle2 size={14} />
                 <span>מגיע/ה</span>
@@ -258,11 +255,10 @@ export default function SingleGuestModal({
               <button
                 type="button"
                 onClick={() => setRsvpStatus('maybe')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  rsvpStatus === 'maybe'
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${rsvpStatus === 'maybe'
                     ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <HelpCircle size={14} />
                 <span>אולי</span>
@@ -270,11 +266,10 @@ export default function SingleGuestModal({
               <button
                 type="button"
                 onClick={() => setRsvpStatus('not_coming')}
-                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  rsvpStatus === 'not_coming'
+                className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${rsvpStatus === 'not_coming'
                     ? 'bg-red-600 text-white border-red-600 shadow-xs'
                     : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 <XCircle size={14} />
                 <span>לא מגיע/ה</span>
@@ -288,11 +283,10 @@ export default function SingleGuestModal({
             <button
               type="button"
               onClick={() => setPaid(!paid)}
-              className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${
-                paid
+              className={`w-full py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${paid
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Coins size={16} className={paid ? 'text-emerald-600' : 'text-gray-400'} />
