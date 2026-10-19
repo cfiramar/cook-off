@@ -268,12 +268,12 @@ export default function GuestCardModal({
   const entryFee = eventInfo?.isFree ? 0 : (eventInfo?.entryFee || 0);
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer" 
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990] flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer"
       dir="rtl"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden relative border border-gray-100 animate-in zoom-in-95 duration-200 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
@@ -336,7 +336,7 @@ export default function GuestCardModal({
                 />
                 <KeyRound size={16} className="absolute left-3 top-3 text-gray-400 pointer-events-none" />
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">בני אותו משק בית יכולים להשתמש בקודים זה של זה.</p>
+              <p className="text-[11px] text-gray-400 mt-1">ניתן להשתמש בקוד של בן/בת הזוג.</p>
             </div>
 
             <div className="sm:col-span-2">
@@ -416,8 +416,8 @@ export default function GuestCardModal({
                   type="button"
                   onClick={() => setCanVote(!canVote)}
                   className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${canVote
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-2xs'
-                      : 'bg-white border-gray-200 text-gray-500 opacity-80'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900 shadow-2xs'
+                    : 'bg-white border-gray-200 text-gray-500 opacity-80'
                     }`}
                 >
                   <span className="flex items-center gap-1.5">
@@ -437,8 +437,8 @@ export default function GuestCardModal({
                     if (next) setPaid(true);
                   }}
                   className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between transition-all ${shouldPayFee
-                      ? 'bg-purple-50 border-purple-300 text-purple-900 shadow-2xs'
-                      : 'bg-amber-100/70 border-amber-300 text-amber-900 shadow-2xs'
+                    ? 'bg-purple-50 border-purple-300 text-purple-900 shadow-2xs'
+                    : 'bg-amber-100/70 border-amber-300 text-amber-900 shadow-2xs'
                     }`}
                 >
                   <span className="flex items-center gap-1.5">
@@ -511,11 +511,10 @@ export default function GuestCardModal({
                       setShouldPayFee(next);
                       if (!next) setPaid(false);
                     }}
-                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition-all ${
-                      !shouldPayFee
+                    className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border transition-all ${!shouldPayFee
                         ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
                         : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-100'
-                    }`}
+                      }`}
                     title={shouldPayFee ? 'לחץ כדי להגדיר פטור מתשלום' : 'לחץ כדי לבטל את הפטור ולחייב בדמי כניסה'}
                   >
                     {!shouldPayFee ? 'פטור מתשלום ✓' : 'הגדר כפטור מתשלום'}
@@ -525,8 +524,8 @@ export default function GuestCardModal({
                   {eventInfo?.isFree
                     ? 'האירוע מוגדר כאירוע ללא תשלום'
                     : !shouldPayFee
-                    ? 'האורח מוגדר כפטור מתשלום דמי כניסה (ללא עלות)'
-                    : `דמי כניסה לאירוע: ₪${entryFee}`}
+                      ? 'האורח מוגדר כפטור מתשלום דמי כניסה (ללא עלות)'
+                      : `דמי כניסה לאירוע: ₪${entryFee}`}
                 </p>
               </div>
 

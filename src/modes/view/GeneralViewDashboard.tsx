@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAllEvents } from '../../hooks/useFirebaseData';
 import ViewSplashOverlay from './components/ViewSplashOverlay';
 import AppUpdateModal, { APP_CURRENT_VERSION } from '../../components/ui/AppUpdateModal';
+import { useTvRemoteNavigation } from '../../utils/useTvRemoteNavigation';
 import {
   Calendar,
   Tv,
@@ -17,19 +18,26 @@ export default function GeneralViewDashboard() {
   const navigate = useNavigate();
   const [lastEventId, setLastEventId] = useState<string | null>(null);
   const firstCardRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Splash screen state (1s minimum display + fade out)
-  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>('holding');
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const isTvApp = typeof navigator !== 'undefined' && navigator.userAgent.includes('CookOffTV');
+
+  // Splash screen state (1s minimum display + fade out on web; skipped on TV where native splash handles loading)
+  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>(
+    isTvApp ? 'done' : 'holding'
+  );
+  const [minTimeElapsed, setMinTimeElapsed] = useState(isTvApp);
 
   useEffect(() => {
+    if (isTvApp) return;
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
     }, 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isTvApp]);
 
   useEffect(() => {
+    if (isTvApp) return;
     if (minTimeElapsed && !loading && splashPhase === 'holding') {
       setSplashPhase('fading');
       const fadeTimer = setTimeout(() => {
@@ -37,7 +45,7 @@ export default function GeneralViewDashboard() {
       }, 600);
       return () => clearTimeout(fadeTimer);
     }
-  }, [minTimeElapsed, loading, splashPhase]);
+  }, [minTimeElapsed, loading, splashPhase, isTvApp]);
 
   // App Update Modal State
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -53,16 +61,6 @@ export default function GeneralViewDashboard() {
     }
   }, []);
 
-  // Auto-focus first card or last visited card when events load for TV remote D-pad navigation
-  useEffect(() => {
-    if (!loading && events.length > 0 && !isUpdateModalOpen && splashPhase === 'done') {
-      const timer = setTimeout(() => {
-        firstCardRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, events.length, isUpdateModalOpen, splashPhase]);
-
   const selectEvent = (eventId?: string) => {
     if (!eventId) return;
     try {
@@ -72,6 +70,37 @@ export default function GeneralViewDashboard() {
     }
     navigate(`/view/${eventId}`);
   };
+
+  // Auto-redirect if only 1 event exists or if an active running event exists (unless user navigated via ?select=true)
+  useEffect(() => {
+    if (loading || events.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const isManualSelect = params.get('select') === 'true';
+
+    if (!isManualSelect) {
+      // 1. If there's only 1 event, directly launch it
+      if (events.length === 1) {
+        selectEvent(events[0].id);
+        return;
+      }
+
+      // 2. If an event has a currently running contest/timer, auto-launch it
+      const runningEvent = events.find(e => (e as any).timerStatus === 'running');
+      if (runningEvent) {
+        selectEvent(runningEvent.id);
+        return;
+      }
+    }
+  }, [loading, events]);
+
+  // TV Remote Spatial Navigation (D-pad arrow navigation, prevent default scroll, OK/Enter click)
+  useTvRemoteNavigation({
+    containerRef,
+    initialFocusRef: firstCardRef,
+    active: !loading && events.length > 0 && !isUpdateModalOpen && splashPhase === 'done',
+    autoFocus: true,
+  });
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return 'לא נקבע תאריך';
@@ -83,9 +112,12 @@ export default function GeneralViewDashboard() {
   const lastEvent = events.find(e => e.id === lastEventId);
 
   return (
-    <div className="flex-1 w-full relative bg-gray-950 text-white font-sans h-screen overflow-y-auto admin-scroll select-none">
-      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out */}
-      {splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
+    <div
+      ref={containerRef}
+      className="flex-1 w-full relative bg-gray-950 text-white font-sans h-screen overflow-y-auto overflow-x-hidden admin-scroll select-none max-w-full"
+    >
+      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out (on web only) */}
+      {!isTvApp && splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
 
       {/* Background Ambient Glow */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[140px] pointer-events-none"></div>
@@ -104,8 +136,9 @@ export default function GeneralViewDashboard() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              tabIndex={0}
               onClick={() => setIsUpdateModalOpen(true)}
-              className="flex items-center gap-2.5 bg-gray-900/90 hover:bg-gray-800 text-gray-200 hover:text-white px-4 py-3 rounded-2xl font-bold border border-gray-700/80 shadow-lg shadow-black/40 transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-400 cursor-pointer"
+              className="flex items-center gap-2.5 bg-gray-900/90 hover:bg-gray-800 text-gray-200 hover:text-white px-4 py-3 rounded-2xl font-bold border border-gray-700/80 shadow-lg shadow-black/40 transition-all transform hover:scale-105 focus:scale-105 focus:ring-4 focus:ring-blue-400 focus:border-blue-400 focus:shadow-[0_0_30px_rgba(59,130,246,0.6)] cursor-pointer outline-none"
               title="עדכון אפליקציה"
             >
               <RefreshCw className="w-5 h-5 text-blue-400" />
@@ -114,8 +147,9 @@ export default function GeneralViewDashboard() {
 
             {lastEvent && (
               <button
+                tabIndex={0}
                 onClick={() => selectEvent(lastEvent.id)}
-                className="group flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-400 cursor-pointer"
+                className="group flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-3 rounded-2xl font-bold shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 focus:scale-105 focus:ring-4 focus:ring-blue-400 focus:border-blue-400 focus:shadow-[0_0_30px_rgba(59,130,246,0.6)] cursor-pointer outline-none"
               >
                 <PlayCircle className="w-6 h-6 animate-pulse" />
                 <span>המשך לאירוע האחרון: {lastEvent.title}</span>
@@ -151,7 +185,7 @@ export default function GeneralViewDashboard() {
                     role="button"
                     onClick={() => selectEvent(event.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === 'Enter' || e.key === ' ' || (e as any).keyCode === 23) {
                         e.preventDefault();
                         selectEvent(event.id);
                       }
@@ -160,7 +194,7 @@ export default function GeneralViewDashboard() {
                       isLast 
                         ? 'border-blue-500/80 shadow-lg shadow-blue-500/20' 
                         : 'border-gray-800 hover:border-gray-700'
-                    } hover:scale-[1.02] hover:shadow-2xl hover:border-blue-400 focus:scale-[1.03] focus:ring-4 focus:ring-blue-500 focus:border-blue-400 focus:shadow-2xl focus:shadow-blue-500/40`}
+                    } hover:scale-[1.02] hover:shadow-2xl hover:border-blue-400 focus:scale-[1.04] focus:ring-4 focus:ring-blue-400 focus:border-blue-400 focus:shadow-[0_0_40px_rgba(59,130,246,0.6)]`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 

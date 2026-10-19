@@ -68,12 +68,8 @@ export function isGuestPinValid(
 export function getLoginHintText(guest: Guest, allGuests: Guest[]): string {
   const siblings = getHouseholdSiblings(guest, allGuests);
 
-  if (siblings.length === 1) {
-    return `4 ספרות של הטלפון שלכם (או של ${siblings[0].name})`;
-  }
-
-  if (siblings.length > 1) {
-    return '4 ספרות של הטלפון שלכם (או של בני הבית)';
+  if (siblings.length >= 1) {
+    return `4 ספרות של הטלפון שלכם (או של בן/בת הזוג)`;
   }
 
   return '4 ספרות אחרונות של הטלפון';

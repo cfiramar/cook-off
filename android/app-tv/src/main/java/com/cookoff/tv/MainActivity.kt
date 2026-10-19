@@ -52,7 +52,7 @@ class MainActivity : Activity() {
         }
 
         val splashIcon = ImageView(this).apply {
-            setImageResource(R.mipmap.ic_launcher)
+            setImageResource(R.drawable.tv_splash_icon)
             val iconSize = (160 * resources.displayMetrics.density).toInt()
             layoutParams = FrameLayout.LayoutParams(iconSize, iconSize).apply {
                 gravity = android.view.Gravity.CENTER
@@ -91,6 +91,7 @@ class MainActivity : Activity() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 errorLayout.visibility = View.GONE
                 webView.visibility = View.VISIBLE
+                webView.requestFocus()
                 dismissSplash()
             }
         }
@@ -150,9 +151,10 @@ class MainActivity : Activity() {
         splashLayout.postDelayed({
             splashLayout.animate()
                 .alpha(0f)
-                .setDuration(600)
+                .setDuration(400)
                 .withEndAction {
                     splashLayout.visibility = View.GONE
+                    webView.requestFocus()
                 }
         }, remainingDelay)
     }
@@ -185,9 +187,9 @@ class MainActivity : Activity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             val currentUrl = webView.url ?: ""
-            // If on specific event view (/view/...), return to general view dashboard (/view)
+            // If on specific event view (/view/...), return to general view dashboard (/view?select=true)
             if (currentUrl.contains("/view/") && !currentUrl.endsWith("/view")) {
-                webView.loadUrl(targetUrl)
+                webView.loadUrl("$targetUrl?select=true")
                 return true
             }
 

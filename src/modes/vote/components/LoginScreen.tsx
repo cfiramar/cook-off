@@ -66,7 +66,7 @@ export default function LoginScreen({ guests, onLogin }: Props) {
       const siblings = getHouseholdSiblings(selectedGuest, guests);
       showAlert(
         siblings.length > 0
-          ? 'קוד שגוי, אנא נסו שנית (ניתן להשתמש גם בקוד של בן/בת הזוג או בני הבית)'
+          ? 'קוד שגוי, אנא נסו שנית (או הזינו את קוד של בן/בת הזוג)'
           : 'קוד שגוי, אנא נסו שנית'
       );
       setTimeout(() => {
@@ -81,13 +81,13 @@ export default function LoginScreen({ guests, onLogin }: Props) {
       <div className="flex-1 flex flex-col px-4 py-2 sm:py-4 w-full max-w-md mx-auto relative h-full justify-between items-center overflow-hidden select-none">
         {/* Top Back Navigation Bar */}
         <div className="w-full shrink-0 flex items-center justify-between pt-1 sm:pt-2">
-          <button 
+          <button
             type="button"
             onClick={() => {
               setSelectedGuest(null);
               setPin('');
               setIsError(false);
-            }} 
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/15 text-white/90 text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-md cursor-pointer"
             title="חזור לבחירת משתמש"
             aria-label="חזור"
@@ -112,9 +112,7 @@ export default function LoginScreen({ guests, onLogin }: Props) {
             <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] sm:text-xs text-amber-300 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm shadow-xs">
               <Users size={12} className="shrink-0" />
               <span>
-                {selectedGuestSiblings.length === 1
-                  ? `אפשר גם להזין את הקוד של ${selectedGuestSiblings[0].name}`
-                  : 'אפשר גם להזין קוד של כל אחד מבני הבית'}
+                ניתן להזין גם את הקוד של בן/בת הזוג
               </span>
             </div>
           )}
@@ -123,7 +121,7 @@ export default function LoginScreen({ guests, onLogin }: Props) {
         {/* Center: Modern Glassmorphic PinPad */}
         <div className="w-full flex-1 flex flex-col justify-center items-center my-auto">
           <div className="w-full max-w-[310px] sm:max-w-[345px] p-3.5 sm:p-5 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/15 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col items-center">
-            <PinPad 
+            <PinPad
               pin={pin}
               onPinChange={setPin}
               onComplete={handlePinComplete}
@@ -145,9 +143,9 @@ export default function LoginScreen({ guests, onLogin }: Props) {
   return (
     <div className="flex-1 flex flex-col p-6 w-full max-w-md mx-auto relative h-full min-h-0 overflow-hidden">
       <h2 className="text-3xl font-bold text-theme-primary mb-6 mt-10 text-center">מי אתם?</h2>
-      
+
       <div className="mb-6 relative z-10">
-        <input 
+        <input
           type="search"
           name="filter_query_random_guest"
           id="filter_query_random_guest"

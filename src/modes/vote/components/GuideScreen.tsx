@@ -28,10 +28,7 @@ export default function GuideScreen({ onNext }: Props) {
             </div>
             <div className="flex-1 text-right">
               <p className="text-base sm:text-lg leading-snug">
-                התחברו למערכת: חפשו את שמכם, והזינו את <strong className="text-theme-primary">4 הספרות האחרונות</strong> של מספר הטלפון שלכם.
-              </p>
-              <p className="text-xs sm:text-sm text-gray-300/90 mt-1.5 font-normal">
-                💡 <span className="text-amber-300 font-medium">טיפ:</span> בני אותו משק בית יכולים להתחבר באמצעות הקוד של כל אחד מבני הבית.
+                התחברו למערכת: חפשו את שמכם, והזינו את <strong className="text-theme-primary">4 הספרות האחרונות</strong> של מספר הטלפון שלכם או של בן/בת הזוג שלכם.
               </p>
             </div>
           </motion.div>
@@ -73,8 +70,8 @@ export default function GuideScreen({ onNext }: Props) {
             <div className="bg-theme-secondary text-white w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shrink-0 font-bold mt-0.5 text-sm sm:text-base shadow-sm">
               4
             </div>
-            <p className="text-base sm:text-lg leading-snug text-red-400 font-medium">
-              שימו לב: אינכם יכולים להצביע למנה שהכנתם בעצמכם או למנות שהוגדרו מחוץ לתחרות!
+            <p className="text-base sm:text-lg leading-snug">
+              שימו לב: לביטול בחירת מנה יש ללחוץ עליה פעם נוספת.
             </p>
           </motion.div>
         </div>

@@ -101,7 +101,7 @@ describe('householdPinAuth unit tests', () => {
   it('generates helpful login hint text depending on household members', () => {
     const yossi = guests[0]; // 2 siblings in household
     const hintYossi = getLoginHintText(yossi, guests);
-    assert.ok(hintYossi.includes('בני הבית'), 'Should mention household members when multiple exist');
+    assert.ok(hintYossi.includes('בן/בת הזוג'), 'Should mention partner/household when multiple exist');
 
     const levi = guests[2]; // 0 siblings in hh_levi
     const hintLevi = getLoginHintText(levi, guests);
@@ -113,7 +113,7 @@ describe('householdPinAuth unit tests', () => {
       { id: 'c_2', name: 'מיכל', pin: '2222', status: 'not_logged_in', householdId: 'hh_c' }
     ];
     const hintAvi = getLoginHintText(coupleGuests[0], coupleGuests);
-    assert.ok(hintAvi.includes('מיכל'), 'Should name the single partner/sibling');
+    assert.ok(hintAvi.includes('בן/בת הזוג'), 'Should mention partner');
   });
 
   it('links households by householdName if householdId is missing but names match', () => {

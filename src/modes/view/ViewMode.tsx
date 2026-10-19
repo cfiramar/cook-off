@@ -423,18 +423,24 @@ export default function ViewMode() {
   const [dramaticState, setDramaticState] = useState<'none' | 'countdown' | 'ended'>('none');
   const [extraTimeNeeded, setExtraTimeNeeded] = useState(false);
 
-  // Splash screen state (1s minimum display + fade out)
-  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>('holding');
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const isTvApp = typeof navigator !== 'undefined' && navigator.userAgent.includes('CookOffTV');
+
+  // Splash screen state (1s minimum display + fade out on web; skipped on TV where native splash handles loading)
+  const [splashPhase, setSplashPhase] = useState<'holding' | 'fading' | 'done'>(
+    isTvApp ? 'done' : 'holding'
+  );
+  const [minTimeElapsed, setMinTimeElapsed] = useState(isTvApp);
 
   useEffect(() => {
+    if (isTvApp) return;
     const timer = setTimeout(() => {
       setMinTimeElapsed(true);
     }, 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isTvApp]);
 
   useEffect(() => {
+    if (isTvApp) return;
     if (minTimeElapsed && !loading && splashPhase === 'holding') {
       setSplashPhase('fading');
       const fadeTimer = setTimeout(() => {
@@ -442,13 +448,13 @@ export default function ViewMode() {
       }, 600);
       return () => clearTimeout(fadeTimer);
     }
-  }, [minTimeElapsed, loading, splashPhase]);
+  }, [minTimeElapsed, loading, splashPhase, isTvApp]);
 
   // Handle remote Back button or Escape to return to event selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.key === 'Backspace' || (e as any).keyCode === 4) {
-        navigate('/view');
+        navigate('/view?select=true');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -729,12 +735,12 @@ export default function ViewMode() {
 
   return (
     <div style={containerStyles} className="absolute inset-0 flex flex-col overflow-hidden bg-theme-bg">
-      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out */}
-      {splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
+      {/* 1s Minimum Splash Screen Overlay with Smooth Fade-Out (on web only) */}
+      {!isTvApp && splashPhase !== 'done' && <ViewSplashOverlay isFadingOut={splashPhase === 'fading'} />}
 
       {/* Subtle TV back navigation button (visible on hover or remote focus) */}
       <button
-        onClick={() => navigate('/view')}
+        onClick={() => navigate('/view?select=true')}
         aria-label="חזרה לרשימת אירועים"
         className="fixed top-4 right-4 z-50 p-2.5 rounded-full bg-black/40 hover:bg-black/80 text-white/50 hover:text-white backdrop-blur-md transition-all duration-300 opacity-0 hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
         title="חזרה לבחירת אירוע"

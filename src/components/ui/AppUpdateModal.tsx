@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Download, ExternalLink, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTvRemoteNavigation } from '../../utils/useTvRemoteNavigation';
 
 export interface AppUpdateModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ export interface AppUpdateModalProps {
   isDarkMode?: boolean;
 }
 
-export const APP_CURRENT_VERSION = 'v1.0.3';
+export const APP_CURRENT_VERSION = 'v1.0.4';
 
 export default function AppUpdateModal({
   isOpen,
@@ -30,6 +31,25 @@ export default function AppUpdateModal({
   const [releaseCheckError, setReleaseCheckError] = useState<string | null>(null);
   const [isReloading, setIsReloading] = useState(false);
   const modalCloseRef = useRef<HTMLButtonElement | null>(null);
+  const modalRef = useRef<HTMLDivElement | null>(null);
+
+  useTvRemoteNavigation({
+    active: isOpen,
+    containerRef: modalRef,
+    initialFocusRef: modalCloseRef,
+  });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Backspace' || (e as any).keyCode === 4) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const checkUpdates = async () => {
     setIsCheckingUpdate(true);
@@ -93,6 +113,7 @@ export default function AppUpdateModal({
       }}
     >
       <div
+        ref={modalRef}
         className={`border rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative flex flex-col gap-6 text-right animate-in zoom-in-95 duration-200 ${
           isDarkMode
             ? 'bg-gray-900 border-gray-700 text-white'
