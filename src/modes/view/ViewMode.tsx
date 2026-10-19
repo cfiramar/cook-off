@@ -185,19 +185,68 @@ function FlavorTextRotator() {
 // Persistent in-memory image cache to eliminate network latency between rotations
 const globalImageCache = new Map<string, HTMLImageElement>();
 
-/**
- * Calculates adaptive title font sizing so titles never exceed 2 lines.
- */
-const getTitleClass = (name: string) => {
-  if (name.length > 45) return 'text-2xl md:text-3xl lg:text-4xl';
-  if (name.length > 25) return 'text-3xl md:text-4xl lg:text-5xl';
-  return 'text-4xl md:text-5xl lg:text-6xl';
-};
+const TITLE_FONT_LEVELS = [
+  'text-2xl md:text-3xl lg:text-4xl', // smaller base font size
+  'text-xl md:text-2xl lg:text-3xl',
+  'text-lg md:text-xl lg:text-2xl',
+  'text-base md:text-lg lg:text-xl',
+  'text-sm md:text-base lg:text-lg',
+];
 
-const FONT_LEVELS = [
-  'text-2xl md:text-3xl',
-  'text-xl md:text-2xl',
-  'text-lg md:text-xl'
+interface DynamicTitleProps {
+  text: string;
+}
+
+/**
+ * Dynamically sizes down the title font size until it fits within 2 lines,
+ * preventing any truncation or ellipsis ("...").
+ */
+function DynamicTitle({ text }: DynamicTitleProps) {
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  const [level, setLevel] = useState(0);
+  const [currentText, setCurrentText] = useState(text);
+
+  // Synchronously reset level during render when text changes
+  if (text !== currentText) {
+    setCurrentText(text);
+    setLevel(0);
+  }
+
+  useLayoutEffect(() => {
+    if (!headingRef.current) return;
+    const el = headingRef.current;
+    
+    // Check if the title exceeds 2 lines:
+    // With WebkitLineClamp: 2, clientHeight is clamped to 2 lines,
+    // whereas scrollHeight reflects the full unclamped height.
+    const isClamped = el.scrollHeight > el.clientHeight + 2;
+
+    if (isClamped && level < TITLE_FONT_LEVELS.length - 1) {
+      setLevel((prev) => prev + 1);
+    }
+  }, [text, level]);
+
+  return (
+    <h2
+      ref={headingRef}
+      style={{
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+      }}
+      className={`${TITLE_FONT_LEVELS[level]} font-theme-main font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)]`}
+    >
+      {text}
+    </h2>
+  );
+}
+
+const DESC_FONT_LEVELS = [
+  'text-lg md:text-xl lg:text-2xl', // smaller base font size
+  'text-base md:text-lg lg:text-xl',
+  'text-sm md:text-base lg:text-lg',
+  'text-xs md:text-sm lg:text-base'
 ];
 
 interface AutoScrollDescriptionProps {
@@ -209,22 +258,24 @@ interface AutoScrollDescriptionProps {
 
 /**
  * Component that auto-sizes description text without trimming.
- * If text still overflows at smallest font size, triggers slow linear scrolling
- * (pause 2s at top -> smooth scroll to end -> pause 2s at bottom) and requests +5s extra slide duration.
+ * Uses top-alignment (justify-start) when overflowing so top line is 100% visible,
+ * steps down font size, and if still overflowing, smoothly scrolls down to reveal
+ * all lines with pauses at top and bottom and requests +5s extra slide duration.
  */
 function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }: AutoScrollDescriptionProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLParagraphElement | null>(null);
   const [level, setLevel] = useState(0);
   const [overflow, setOverflow] = useState(0);
+  const [currentSlideId, setCurrentSlideId] = useState(slideId);
 
-  // Reset when slide changes
-  useEffect(() => {
+  // Synchronously reset state during render when slideId changes
+  if (slideId !== currentSlideId) {
+    setCurrentSlideId(slideId);
     setLevel(0);
     setOverflow(0);
-  }, [slideId]);
+  }
 
-  // Measure overflow and step down font or trigger scroll
   useLayoutEffect(() => {
     if (!text || !containerRef.current || !contentRef.current) return;
 
@@ -233,12 +284,12 @@ function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }:
     const diff = contentHeight - containerHeight;
 
     if (diff > 4) {
-      if (level < FONT_LEVELS.length - 1) {
-        // Step down font size to fit
+      if (level < DESC_FONT_LEVELS.length - 1) {
+        // Step down font size to try to fit
         setLevel((prev) => prev + 1);
       } else {
         // At smallest font size and still overflowing: enable auto-scroll + extra 5s
-        setOverflow(diff);
+        setOverflow(diff + 16);
         onExtraTimeNeeded(true);
       }
     } else {
@@ -250,16 +301,18 @@ function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }:
   if (!text) return null;
 
   const durationSec = Math.max(durationMs / 1000, 1);
-  const pauseStartRatio = Math.min(0.2, 2 / durationSec);
-  const pauseEndRatio = Math.max(0.8, (durationSec - 2) / durationSec);
+  const pauseStartRatio = Math.min(0.2, 2.5 / durationSec);
+  const pauseEndRatio = Math.max(0.8, (durationSec - 2.5) / durationSec);
 
   return (
     <div
       ref={containerRef}
-      className="w-full flex-1 min-h-0 relative overflow-hidden flex flex-col justify-center my-3"
+      className={`w-full flex-1 min-h-0 relative overflow-hidden flex flex-col my-2 ${
+        overflow > 0 ? 'justify-start' : 'justify-center'
+      }`}
     >
       <motion.div
-        key={`${slideId}-${level}`}
+        key={`${slideId}-${level}-${overflow > 0 ? 'scroll' : 'static'}`}
         initial={{ y: 0 }}
         animate={
           overflow > 0
@@ -273,12 +326,13 @@ function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }:
                 times: [0, pauseStartRatio, pauseEndRatio, 1],
                 ease: 'linear'
               }
-            : { duration: 0.3 }
+            : { duration: 0.2 }
         }
+        className="w-full"
       >
         <p
           ref={contentRef}
-          className={`${FONT_LEVELS[level]} text-white/95 leading-relaxed font-medium whitespace-pre-line drop-shadow-[0_2px_10px_rgba(0,0,0,1)]`}
+          className={`${DESC_FONT_LEVELS[level]} text-white/95 leading-relaxed font-medium whitespace-pre-line drop-shadow-[0_2px_10px_rgba(0,0,0,1)] py-1`}
         >
           {text}
         </p>
@@ -713,11 +767,7 @@ export default function ViewMode() {
                       </div>
                     )}
 
-                    <h2
-                      className={`${getTitleClass(currentSlide.meals[0].name)} font-theme-main font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)] line-clamp-2`}
-                    >
-                      {currentSlide.meals[0].name}
-                    </h2>
+                    <DynamicTitle text={currentSlide.meals[0].name} />
                   </div>
 
                   {/* Middle section: Auto-sizing and auto-scrolling Description */}

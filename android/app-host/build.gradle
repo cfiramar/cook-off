@@ -3,6 +3,9 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def appVersionCode = project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : 2
+def appVersionName = project.hasProperty('versionName') ? project.property('versionName').toString() : "1.0.2"
+
 android {
     namespace 'com.cookoff.host'
     compileSdk 34
@@ -11,18 +14,27 @@ android {
         applicationId "com.cookoff.host"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        versionCode appVersionCode
+        versionName appVersionName
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('../keystore/cookoff.jks')
+            storePassword 'cookoffcontest'
+            keyAlias 'cookoff'
+            keyPassword 'cookoffcontest'
+        }
     }
 
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
         }
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 

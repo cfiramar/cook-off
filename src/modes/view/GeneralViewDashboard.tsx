@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const LAST_EVENT_KEY = 'cookoff_last_tv_event';
-const CURRENT_VERSION = 'v1.0.1';
+const CURRENT_VERSION = 'v1.0.2';
 
 export default function GeneralViewDashboard() {
   const { events, loading, error } = useAllEvents();

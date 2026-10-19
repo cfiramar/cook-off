@@ -29,6 +29,7 @@ android/local.properties
 *.ap_
 *.keystore
 *.jks
+!android/keystore/cookoff.jks
 
 # IDE & Editors
 .idea/

@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.0.1)'
+        description: 'Release Tag Name (e.g. v1.0.2)'
         required: true
-        default: 'v1.0.1'
+        default: 'v1.0.2'
       release_title:
         description: 'Release Title'
         required: true
@@ -38,16 +38,35 @@ jobs:
           sed -i 's/\r$//' android/gradlew
           chmod +x android/gradlew
 
-      - name: Build Android TV & Host APKs
+      - name: Determine Tag and Title
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "title=${{ github.event.inputs.release_title }} ($TAG)" >> $GITHUB_OUTPUT
+          else
+            TAG="${{ github.ref_name }}"
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "title=Cook-Off Release $TAG" >> $GITHUB_OUTPUT
+          fi
+          # Strip leading 'v' for versionName
+          VERSION_NAME="${TAG#v}"
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+
+      - name: Build Android TV & Host APKs (Release Signed)
         working-directory: android
         run: |
-          ./gradlew :app-tv:assembleDebug :app-host:assembleDebug --no-daemon --stacktrace
+          ./gradlew :app-tv:assembleRelease :app-host:assembleRelease \
+            -PversionCode=${{ github.run_number }} \
+            -PversionName=${{ steps.vars.outputs.version_name }} \
+            --no-daemon --stacktrace
 
       - name: Prepare APK Artifacts
         run: |
           mkdir -p release-apks
-          cp android/app-tv/build/outputs/apk/debug/app-tv-debug.apk release-apks/CookOff-AndroidTV-ViewMode.apk
-          cp android/app-host/build/outputs/apk/debug/app-host-debug.apk release-apks/CookOff-Host-Mobile.apk
+          cp android/app-tv/build/outputs/apk/release/app-tv-release.apk release-apks/CookOff-AndroidTV-ViewMode.apk
+          cp android/app-host/build/outputs/apk/release/app-host-release.apk release-apks/CookOff-Host-Mobile.apk
           ls -la release-apks/
 
       - name: Upload APKs as Workflow Run Artifacts
@@ -56,17 +75,6 @@ jobs:
           name: CookOff-APKs
           path: release-apks/
           retention-days: 30
-
-      - name: Determine Tag and Title
-        id: vars
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag_name }}" >> $GITHUB_OUTPUT
-            echo "title=${{ github.event.inputs.release_title }} (${{ github.event.inputs.tag_name }})" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "title=Cook-Off Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Publish GitHub Release with APKs
         env:
