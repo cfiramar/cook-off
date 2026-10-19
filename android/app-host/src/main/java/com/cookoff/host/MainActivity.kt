@@ -34,17 +34,26 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (filePathCallback != null) {
-            val results: Array<Uri>? = when {
-                result.resultCode == RESULT_OK && result.data != null -> {
-                    val data = result.data
-                    if (data?.clipData != null) {
-                        val count = data.clipData!!.itemCount
-                        Array(count) { i -> data.clipData!!.getItemAt(i).uri }
-                    } else if (data?.data != null) {
-                        arrayOf(data.data!)
-                    } else null
+            val intentData = result.data
+            val results: Array<Uri>? = if (result.resultCode == RESULT_OK && intentData != null) {
+                val clipData = intentData.clipData
+                val singleUri = intentData.data
+                if (clipData != null) {
+                    val uriList = ArrayList<Uri>()
+                    for (i in 0 until clipData.itemCount) {
+                        val itemUri = clipData.getItemAt(i).uri
+                        if (itemUri != null) {
+                            uriList.add(itemUri)
+                        }
+                    }
+                    uriList.toTypedArray()
+                } else if (singleUri != null) {
+                    arrayOf(singleUri)
+                } else {
+                    null
                 }
-                else -> null
+            } else {
+                null
             }
             filePathCallback?.onReceiveValue(results)
             filePathCallback = null
