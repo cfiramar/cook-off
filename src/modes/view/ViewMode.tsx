@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { useFirebaseData } from '../../hooks/useFirebaseData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -182,6 +182,111 @@ function FlavorTextRotator() {
   );
 }
 
+// Persistent in-memory image cache to eliminate network latency between rotations
+const globalImageCache = new Map<string, HTMLImageElement>();
+
+/**
+ * Calculates adaptive title font sizing so titles never exceed 2 lines.
+ */
+const getTitleClass = (name: string) => {
+  if (name.length > 45) return 'text-2xl md:text-3xl lg:text-4xl';
+  if (name.length > 25) return 'text-3xl md:text-4xl lg:text-5xl';
+  return 'text-4xl md:text-5xl lg:text-6xl';
+};
+
+const FONT_LEVELS = [
+  'text-2xl md:text-3xl',
+  'text-xl md:text-2xl',
+  'text-lg md:text-xl'
+];
+
+interface AutoScrollDescriptionProps {
+  text?: string;
+  slideId: string;
+  durationMs: number;
+  onExtraTimeNeeded: (needed: boolean) => void;
+}
+
+/**
+ * Component that auto-sizes description text without trimming.
+ * If text still overflows at smallest font size, triggers slow linear scrolling
+ * (pause 2s at top -> smooth scroll to end -> pause 2s at bottom) and requests +5s extra slide duration.
+ */
+function AutoScrollDescription({ text, slideId, durationMs, onExtraTimeNeeded }: AutoScrollDescriptionProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLParagraphElement | null>(null);
+  const [level, setLevel] = useState(0);
+  const [overflow, setOverflow] = useState(0);
+
+  // Reset when slide changes
+  useEffect(() => {
+    setLevel(0);
+    setOverflow(0);
+  }, [slideId]);
+
+  // Measure overflow and step down font or trigger scroll
+  useLayoutEffect(() => {
+    if (!text || !containerRef.current || !contentRef.current) return;
+
+    const containerHeight = containerRef.current.clientHeight;
+    const contentHeight = contentRef.current.scrollHeight;
+    const diff = contentHeight - containerHeight;
+
+    if (diff > 4) {
+      if (level < FONT_LEVELS.length - 1) {
+        // Step down font size to fit
+        setLevel((prev) => prev + 1);
+      } else {
+        // At smallest font size and still overflowing: enable auto-scroll + extra 5s
+        setOverflow(diff);
+        onExtraTimeNeeded(true);
+      }
+    } else {
+      setOverflow(0);
+      onExtraTimeNeeded(false);
+    }
+  }, [text, level, slideId, onExtraTimeNeeded]);
+
+  if (!text) return null;
+
+  const durationSec = Math.max(durationMs / 1000, 1);
+  const pauseStartRatio = Math.min(0.2, 2 / durationSec);
+  const pauseEndRatio = Math.max(0.8, (durationSec - 2) / durationSec);
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full flex-1 min-h-0 relative overflow-hidden flex flex-col justify-center my-3"
+    >
+      <motion.div
+        key={`${slideId}-${level}`}
+        initial={{ y: 0 }}
+        animate={
+          overflow > 0
+            ? { y: [0, 0, -overflow, -overflow] }
+            : { y: 0 }
+        }
+        transition={
+          overflow > 0
+            ? {
+                duration: durationSec,
+                times: [0, pauseStartRatio, pauseEndRatio, 1],
+                ease: 'linear'
+              }
+            : { duration: 0.3 }
+        }
+      >
+        <p
+          ref={contentRef}
+          className={`${FONT_LEVELS[level]} text-white/95 leading-relaxed font-medium whitespace-pre-line drop-shadow-[0_2px_10px_rgba(0,0,0,1)]`}
+        >
+          {text}
+        </p>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function ViewMode() {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
@@ -192,6 +297,7 @@ export default function ViewMode() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasRevealed, setHasRevealed] = useState(false);
   const [dramaticState, setDramaticState] = useState<'none' | 'countdown' | 'ended'>('none');
+  const [extraTimeNeeded, setExtraTimeNeeded] = useState(false);
 
   // Handle remote Back button or Escape to return to event selection
   useEffect(() => {
@@ -274,16 +380,6 @@ export default function ViewMode() {
     return () => clearInterval(interval);
   }, [BG_OFFSETS.length]);
 
-  // Preload all meal images into browser memory to eliminate network/decoding transition stutter
-  useEffect(() => {
-    if (!meals || meals.length === 0) return;
-    meals.forEach((meal) => {
-      if (meal.imageUrl) {
-        const img = new Image();
-        img.src = meal.imageUrl;
-      }
-    });
-  }, [meals]);
 
   // Timer effect
   const [totalDuration, setTotalDuration] = useState<number | null>(null);
@@ -356,6 +452,30 @@ export default function ViewMode() {
     });
   }, [meals, guests, eventInfo?.timerDuration, eventInfo?.timerStatus]);
 
+  // Persistent memory cache and active ahead-of-time image preloading (current + next 2 slides)
+  useEffect(() => {
+    if (!slides || slides.length === 0) return;
+    const preloadIndices = [
+      activeIndex,
+      (activeIndex + 1) % slides.length,
+      (activeIndex + 2) % slides.length
+    ];
+    preloadIndices.forEach((idx) => {
+      const slide = slides[idx];
+      const meal = slide?.meals[0];
+      if (meal?.imageUrl && !globalImageCache.has(meal.imageUrl)) {
+        const img = new Image();
+        img.src = meal.imageUrl;
+        globalImageCache.set(meal.imageUrl, img);
+      }
+      if (meal?.lowResImageUrl && !globalImageCache.has(meal.lowResImageUrl)) {
+        const lowImg = new Image();
+        lowImg.src = meal.lowResImageUrl;
+        globalImageCache.set(meal.lowResImageUrl, lowImg);
+      }
+    });
+  }, [slides, activeIndex]);
+
   // Auto-rotating gallery effect with dynamic per-slide duration
   useEffect(() => {
     if (!slides || slides.length === 0) return;
@@ -366,14 +486,16 @@ export default function ViewMode() {
     }
 
     const currentSlide = slides[activeIndex] || slides[0];
-    const duration = currentSlide?.durationMs || 15000;
+    const baseDuration = currentSlide?.durationMs || 15000;
+    const duration = baseDuration + (extraTimeNeeded ? 5000 : 0);
 
     const timeout = setTimeout(() => {
       setActiveIndex((prev) => (prev + 1) % slides.length);
+      setExtraTimeNeeded(false);
     }, duration);
 
     return () => clearTimeout(timeout);
-  }, [slides, activeIndex, eventInfo?.revealState, hasRevealed]);
+  }, [slides, activeIndex, eventInfo?.revealState, hasRevealed, extraTimeNeeded]);
 
   // Adjust activeIndex if it goes out of bounds when slides update
   useEffect(() => {
@@ -569,54 +691,11 @@ export default function ViewMode() {
           )}
         </AnimatePresence>
 
-        {/* Meal Gallery Display: Single Meal Only (35% Details on Left, 65% Image on Right) */}
+        {/* Meal Gallery Display: Single Meal Only (40% Details on Left, 60% Image on Right) */}
         {shouldShowMeals && currentSlide && currentSlide.meals[0] && (
           <div className="absolute inset-0 w-full h-full z-10 flex flex-row">
             {/* Left Column: Meal Details */}
-            <div className="w-[35%] h-full flex flex-col justify-center p-8 md:p-12 z-20" dir="rtl">
-              <div className="w-full flex flex-col justify-center py-6">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentSlide.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.6, ease: "easeInOut" }}
-                    className="flex flex-col text-right gap-4 max-w-full"
-                  >
-                    {currentSlide.meals[0].isNonParticipating && (
-                      <div className="self-start bg-amber-500/90 text-black font-extrabold text-base md:text-xl px-5 py-1.5 rounded-full shadow-lg border border-amber-300 backdrop-blur-md">
-                        מחוץ לתחרות
-                      </div>
-                    )}
-
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-theme-main font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
-                      {currentSlide.meals[0].name}
-                    </h2>
-
-                    <p className="text-xl md:text-2xl lg:text-3xl text-white/95 leading-relaxed font-medium whitespace-pre-line line-clamp-[8] drop-shadow-[0_2px_10px_rgba(0,0,0,1)]">
-                      {currentSlide.meals[0].description}
-                    </p>
-
-                    {(() => {
-                      const attendingChefs = getAttendingChefs(currentSlide.meals[0]);
-                      if (attendingChefs.length === 0) return null;
-                      return (
-                        <div className="pt-2 flex items-center gap-3">
-                          <ChefHat className="text-theme-primary w-8 h-8 drop-shadow-md shrink-0" />
-                          <p className="text-xl md:text-2xl text-gray-200 font-bold drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-wide">
-                            {attendingChefs.join('  |  ')}
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Right Column: Large Meal Image */}
-            <div className="w-[65%] h-full flex items-center justify-center p-6 md:p-10 z-20">
+            <div className="w-[40%] h-full flex flex-col justify-between p-6 md:p-8 pl-2 md:pl-4 z-20" dir="rtl">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={currentSlide.id}
@@ -624,12 +703,89 @@ export default function ViewMode() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.6, ease: "easeInOut" }}
-                  className="w-full h-full flex items-center justify-center"
+                  className="w-full h-full flex flex-col justify-between"
                 >
+                  {/* Top section: Non-participating badge + Title (Pinned) */}
+                  <div className="flex flex-col text-right gap-3 shrink-0">
+                    {currentSlide.meals[0].isNonParticipating && (
+                      <div className="self-start bg-amber-500/90 text-black font-extrabold text-base md:text-xl px-5 py-1.5 rounded-full shadow-lg border border-amber-300 backdrop-blur-md">
+                        מחוץ לתחרות
+                      </div>
+                    )}
+
+                    <h2
+                      className={`${getTitleClass(currentSlide.meals[0].name)} font-theme-main font-bold text-theme-primary leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,1)] line-clamp-2`}
+                    >
+                      {currentSlide.meals[0].name}
+                    </h2>
+                  </div>
+
+                  {/* Middle section: Auto-sizing and auto-scrolling Description */}
+                  <AutoScrollDescription
+                    text={currentSlide.meals[0].description}
+                    slideId={currentSlide.id}
+                    durationMs={(currentSlide?.durationMs || 15000) + (extraTimeNeeded ? 5000 : 0)}
+                    onExtraTimeNeeded={setExtraTimeNeeded}
+                  />
+
+                  {/* Bottom section: White Chef hat with side lines + unbreakable chef names below */}
+                  {(() => {
+                    const attendingChefs = getAttendingChefs(currentSlide.meals[0]);
+                    if (attendingChefs.length === 0) return null;
+                    return (
+                      <div className="mt-auto pt-3 shrink-0 flex flex-col items-center gap-2.5 w-full">
+                        {/* Chef Hat with two lines on its sides */}
+                        <div className="w-full flex items-center gap-3">
+                          <div className="flex-1 h-[1px] bg-gradient-to-r from-transparent via-white/40 to-white/40" />
+                          <ChefHat className="text-white w-7 h-7 md:w-8 md:h-8 drop-shadow-[0_2px_8px_rgba(255,255,255,0.4)] shrink-0" />
+                          <div className="flex-1 h-[1px] bg-gradient-to-l from-transparent via-white/40 to-white/40" />
+                        </div>
+
+                        {/* Chef names below hat, each name unbreakable */}
+                        <div className="w-full text-center flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1">
+                          {attendingChefs.map((chef, idx) => (
+                            <span key={idx} className="inline-flex items-center">
+                              <span className="inline-block whitespace-nowrap text-xl md:text-2xl text-gray-100 font-bold drop-shadow-[0_2px_10px_rgba(0,0,0,1)] tracking-wide">
+                                {chef}
+                              </span>
+                              {idx < attendingChefs.length - 1 && (
+                                <span className="text-white/40 mx-2 text-lg select-none">|</span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Right Column: Large Meal Image with tighter padding and progressive loading */}
+            <div className="w-[60%] h-full flex items-center justify-center p-4 md:p-6 pr-2 md:pr-4 z-20">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: "easeInOut" }}
+                  className="w-full h-full relative flex items-center justify-center"
+                >
+                  {currentSlide.meals[0].lowResImageUrl && (
+                    <img
+                      src={currentSlide.meals[0].lowResImageUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute max-w-full max-h-full object-contain filter blur-sm scale-95 opacity-50 pointer-events-none transition-opacity duration-300"
+                    />
+                  )}
                   <img
                     src={currentSlide.meals[0].imageUrl}
                     alt={currentSlide.meals[0].name}
-                    className="max-w-full max-h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl"
+                    loading="eager"
+                    decoding="sync"
+                    className="relative max-w-full max-h-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-2xl z-10"
                   />
                 </motion.div>
               </AnimatePresence>

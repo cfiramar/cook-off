@@ -181,9 +181,15 @@ export default function MealManager({
         format: 'image/webp'
       });
 
-      // 2. Upload high-res original for TV / ViewMode
+      // 2. Generate high-res optimized WebP for TV / ViewMode (up to 2160px 4K width, 88% quality WebP)
+      const highResFile = await ImageOptimizerService.createLightweightCopy(file, {
+        maxWidth: 2160,
+        quality: 0.88,
+        format: 'image/webp'
+      });
+
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', highResFile);
 
       const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
         method: 'POST',
