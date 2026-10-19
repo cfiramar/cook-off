@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag Name (e.g. v1.0.0)'
+        description: 'Release Tag Name (e.g. v1.0.1)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.0.1'
       release_title:
         description: 'Release Title'
         required: true
@@ -19,7 +19,7 @@ permissions:
   contents: write
 
 jobs:
-  build-apks:
+  build-and-release:
     name: Build Android TV & Host APKs
     runs-on: ubuntu-latest
 
@@ -33,30 +33,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant Execute Permission to gradlew
-        run: chmod +x android/gradlew
+      - name: Fix line endings and permissions for gradlew
+        run: |
+          sed -i 's/\r$//' android/gradlew
+          chmod +x android/gradlew
 
       - name: Build Android TV & Host APKs
         working-directory: android
         run: |
-          ./gradlew :app-tv:assembleDebug :app-host:assembleDebug --no-daemon
+          ./gradlew :app-tv:assembleDebug :app-host:assembleDebug --no-daemon --stacktrace
 
       - name: Prepare APK Artifacts
         run: |
           mkdir -p release-apks
           cp android/app-tv/build/outputs/apk/debug/app-tv-debug.apk release-apks/CookOff-AndroidTV-ViewMode.apk
           cp android/app-host/build/outputs/apk/debug/app-host-debug.apk release-apks/CookOff-Host-Mobile.apk
+          ls -la release-apks/
 
-      - name: Upload APKs as Workflow Artifacts
+      - name: Upload APKs as Workflow Run Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cookoff-apks
+          name: CookOff-APKs
           path: release-apks/
+          retention-days: 30
 
-      - name: Determine Tag
+      - name: Determine Tag and Title
         id: vars
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -67,16 +68,21 @@ jobs:
             echo "title=Cook-Off Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Create GitHub Release with APKs
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.vars.outputs.tag }}
-          name: ${{ steps.vars.outputs.title }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            release-apks/CookOff-AndroidTV-ViewMode.apk
-            release-apks/CookOff-Host-Mobile.apk
+      - name: Publish GitHub Release with APKs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.vars.outputs.tag }}"
+          TITLE="${{ steps.vars.outputs.title }}"
+          
+          echo "Publishing release for tag: $TAG"
+          
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release exists. Uploading APK assets..."
+            gh release upload "$TAG" release-apks/CookOff-AndroidTV-ViewMode.apk release-apks/CookOff-Host-Mobile.apk --clobber
+          else
+            echo "Creating release $TAG..."
+            gh release create "$TAG" release-apks/CookOff-AndroidTV-ViewMode.apk release-apks/CookOff-Host-Mobile.apk \
+              --title "$TITLE" \
+              --generate-notes
+          fi
