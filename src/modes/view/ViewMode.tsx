@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { useFirebaseData, type Meal } from '../../hooks/useFirebaseData';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getThemeStyles } from '../../utils/theme';
@@ -644,21 +646,59 @@ export default function ViewMode() {
     }
   }, [eventInfo?.timerStatus, eventInfo?.timerDuration, timeRemaining]);
 
-  // Handle dramatic countdown state (C & D)
+  // Handle dramatic countdown state (C & D) and auto-advance
   useEffect(() => {
-    if (eventInfo?.timerStatus === 'running' && timeRemaining !== null && timeRemaining > 0 && timeRemaining <= 10000) {
+    if (!eventId || !eventInfo) return;
+
+    // 1. Natural timer reaching last 10s: switch Stage B to Stage C
+    if (
+      eventInfo.timerStatus === 'running' &&
+      timeRemaining !== null &&
+      timeRemaining > 0 &&
+      timeRemaining <= 10000
+    ) {
       setDramaticState('countdown');
-    } else if ((eventInfo?.timerStatus === 'ended' || timeRemaining === 0) && dramaticState === 'countdown') {
+      if (eventInfo.showStage === 'B') {
+        updateDoc(doc(db, 'events', eventId), {
+          showStage: 'C',
+          showMealsCarousel: false
+        }).catch(console.error);
+      }
+    }
+    // 2. Timer reached 0 (end of countdown / timer): transition to Stage D ("Time's Up")
+    else if (
+      eventInfo.timerStatus === 'running' &&
+      timeRemaining !== null &&
+      timeRemaining <= 0
+    ) {
       setDramaticState('ended');
-      // Hold Stage D "Time's up" for 4 seconds before transitioning to Stage E
+      updateDoc(doc(db, 'events', eventId), {
+        showStage: 'D',
+        timerStatus: 'ended',
+        timerEndTime: Date.now(),
+        revealState: 'none',
+        showMealsCarousel: false
+      }).catch(console.error);
+    }
+    // 3. Stage D ("Time's Up") active: hold for 4.5 seconds then auto-advance to Stage E ("Emblem")
+    else if (eventInfo.showStage === 'D' || dramaticState === 'ended') {
+      setDramaticState('ended');
       const t = setTimeout(() => {
         setDramaticState('none');
-      }, 4000);
+        if (eventInfo.showStage === 'D') {
+          updateDoc(doc(db, 'events', eventId), {
+            showStage: 'E',
+            revealState: 'emblem',
+            timerStatus: 'ended',
+            showMealsCarousel: false
+          }).catch(console.error);
+        }
+      }, 4500);
       return () => clearTimeout(t);
-    } else if (eventInfo?.timerStatus !== 'ended' && timeRemaining === null) {
+    } else if (eventInfo.timerStatus !== 'ended' && timeRemaining === null && eventInfo.showStage !== 'C') {
       setDramaticState('none');
     }
-  }, [timeRemaining, eventInfo?.timerStatus, dramaticState]);
+  }, [eventId, timeRemaining, eventInfo?.timerStatus, eventInfo?.timerEndTime, eventInfo?.showStage, dramaticState]);
 
   // Track reveal state change
   useEffect(() => {
@@ -797,25 +837,27 @@ export default function ViewMode() {
   const isStageH = eventInfo?.revealState === '2nd' || eventInfo?.showStage === 'H';
   const isStageG = eventInfo?.revealState === '3rd' || eventInfo?.showStage === 'G';
   const isStageF = eventInfo?.revealState === 'results' || eventInfo?.showStage === 'F';
+  const isTimesUpStageD = eventInfo?.showStage === 'D' || dramaticState === 'ended';
+  const isCountdownStageC =
+    !isTimesUpStageD &&
+    (eventInfo?.showStage === 'C' ||
+      dramaticState === 'countdown' ||
+      (eventInfo?.timerStatus === 'running' && timeRemaining !== null && timeRemaining <= 10000 && timeRemaining > 0));
+
   const isStageE =
-    eventInfo?.revealState === 'emblem' ||
-    eventInfo?.showStage === 'E' ||
-    (eventInfo?.timerStatus === 'ended' &&
-      dramaticState === 'none' &&
-      !isStageF &&
-      !isStageG &&
-      !isStageH &&
-      !isStageI &&
-      !isStageJ &&
-      eventInfo?.showMealsCarousel !== true);
+    !isCountdownStageC &&
+    !isTimesUpStageD &&
+    !isStageF &&
+    !isStageG &&
+    !isStageH &&
+    !isStageI &&
+    !isStageJ &&
+    (eventInfo?.revealState === 'emblem' || eventInfo?.showStage === 'E');
 
   const isPodiumActive = isStageG || isStageH || isStageI;
   const show3rd = isStageG || isStageH || isStageI;
   const show2nd = isStageH || isStageI;
   const show1st = isStageI;
-
-  const isCountdownStageC = dramaticState === 'countdown';
-  const isTimesUpStageD = dramaticState === 'ended';
 
   // In Stage J, if showMealsCarousel is explicitly enabled, show meals gallery with darkened background!
   const isStageJGallery = isStageJ && eventInfo?.showMealsCarousel === true;

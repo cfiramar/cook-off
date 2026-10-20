@@ -351,21 +351,38 @@ function HostModeWithEvent({
 
     let interval: ReturnType<typeof setInterval>;
     if (eventInfo.timerStatus === 'running' && eventInfo.timerEndTime) {
-      interval = setInterval(() => {
+      const calculateRemaining = () => {
         const remaining = Math.max(0, eventInfo.timerEndTime! - Date.now());
         setTimeRemaining(remaining);
 
         if (remaining <= 0) {
-          clearInterval(interval);
-          handleStopTimer();
+          // Timer finished: advance to Stage D ("Time's Up")
+          handleSetStage('D');
+        } else if (remaining <= 10000 && eventInfo.showStage === 'B') {
+          // Natural progression: entering final 10s countdown (Stage C)
+          handleSetStage('C');
         }
-      }, 1000);
+      };
+
+      calculateRemaining();
+      interval = setInterval(calculateRemaining, 1000);
     } else {
       setTimeRemaining(null);
     }
 
     return () => clearInterval(interval);
-  }, [eventInfo?.timerStatus, eventInfo?.timerEndTime]);
+  }, [eventInfo?.timerStatus, eventInfo?.timerEndTime, eventInfo?.showStage]);
+
+  // Auto-transition Stage D ("Time's Up") -> Stage E ("Emblem") after 4.5 seconds
+  useEffect(() => {
+    if (!eventId || !eventInfo) return;
+    if (eventInfo.showStage === 'D') {
+      const timer = setTimeout(() => {
+        handleSetStage('E');
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [eventId, eventInfo?.showStage]);
 
   // Back button handling for full-screen modals
   useEffect(() => {
@@ -444,18 +461,20 @@ function HostModeWithEvent({
     if (eventInfo.revealState === 'results' || eventInfo.showStage === 'F') return 'F';
     if (eventInfo.revealState === 'emblem' || eventInfo.showStage === 'E') return 'E';
 
-    // Automatic dramatic countdown on last 10s of running timer
-    if (eventInfo.timerStatus === 'running' && timeRemaining !== null && timeRemaining <= 10000 && timeRemaining > 0) {
+    if (eventInfo.showStage === 'D') return 'D';
+
+    // Automatic dramatic countdown on last 10s of running timer, or explicit stage C
+    if (eventInfo.showStage === 'C' || (eventInfo.timerStatus === 'running' && timeRemaining !== null && timeRemaining <= 10000 && timeRemaining > 0)) {
       return 'C';
     }
 
-    if (eventInfo.showStage === 'D') return 'D';
-    if (eventInfo.showStage === 'C') return 'C';
     if (eventInfo.showStage === 'B') return 'B';
 
     if (eventInfo.timerStatus === 'running') {
       return 'B';
     }
+
+    if (eventInfo.showStage === 'A') return 'A';
 
     if (eventInfo.timerStatus === 'ended') {
       if (eventInfo.showMealsCarousel === true) return 'A';
@@ -494,7 +513,15 @@ function HostModeWithEvent({
           updatePayload.revealState = 'none';
           updatePayload.showMealsCarousel = false;
           updatePayload.timerStatus = 'running';
-          updatePayload.timerEndTime = Date.now() + 10000;
+          {
+            const curRemaining = eventInfo.timerEndTime ? eventInfo.timerEndTime - Date.now() : 0;
+            if (curRemaining > 0 && curRemaining <= 10000) {
+              updatePayload.timerEndTime = eventInfo.timerEndTime;
+            } else {
+              updatePayload.timerEndTime = Date.now() + 10000;
+              updatePayload.timerDuration = 10000;
+            }
+          }
           break;
 
         case 'D':
@@ -549,7 +576,7 @@ function HostModeWithEvent({
     switch (current) {
       case 'A': return 'B';
       case 'B': return eventInfo?.timerStatus === 'running' ? 'C' : 'E';
-      case 'C': return 'E';
+      case 'C': return 'D';
       case 'D': return 'E';
       case 'E': return 'F';
       case 'F': return 'G';
@@ -565,8 +592,8 @@ function HostModeWithEvent({
       case 'A': return null;
       case 'B': return 'A';
       case 'C': return 'B';
-      case 'D': return 'B';
-      case 'E': return 'B';
+      case 'D': return 'C';
+      case 'E': return 'D';
       case 'F': return 'E';
       case 'G': return 'F';
       case 'H': return 'G';
@@ -597,7 +624,9 @@ function HostModeWithEvent({
       batch.update(eventRef, {
         timerStatus: 'idle',
         timerEndTime: null,
-        revealState: 'none'
+        revealState: 'none',
+        showStage: 'A',
+        showMealsCarousel: true
       });
 
       await batch.commit();
