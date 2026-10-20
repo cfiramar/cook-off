@@ -94,16 +94,13 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
   });
 
   return (
-    <div className={`flex-1 flex flex-col w-full min-h-screen relative font-sans p-4 max-w-lg mx-auto select-none transition-colors duration-200 ${
-      isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <div className={`flex-1 flex flex-col w-full min-h-screen relative font-sans p-4 max-w-lg mx-auto select-none transition-colors duration-200 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      }`}>
       {/* Ambient background glows */}
-      <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[40%] rounded-full blur-[100px] pointer-events-none ${
-        isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/20'
-      }`} />
-      <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] rounded-full blur-[100px] pointer-events-none ${
-        isDarkMode ? 'bg-emerald-600/15' : 'bg-emerald-400/20'
-      }`} />
+      <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[40%] rounded-full blur-[100px] pointer-events-none ${isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/20'
+        }`} />
+      <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[40%] rounded-full blur-[100px] pointer-events-none ${isDarkMode ? 'bg-emerald-600/15' : 'bg-emerald-400/20'
+        }`} />
 
       {/* Top action row */}
       <div className="flex justify-between items-center z-10 pt-2 mb-4">
@@ -117,11 +114,10 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsUpdateModalOpen(true)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all transform hover:scale-105 active:scale-95 cursor-pointer ${
-              isDarkMode
-                ? 'bg-slate-900 border-slate-800 text-slate-200 hover:text-white hover:border-slate-700'
-                : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 shadow-xs'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all transform hover:scale-105 active:scale-95 cursor-pointer ${isDarkMode
+              ? 'bg-slate-900 border-slate-800 text-slate-200 hover:text-white hover:border-slate-700'
+              : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:border-slate-300 shadow-xs'
+              }`}
             title="עדכון אפליקציה"
           >
             <RefreshCw size={14} className="text-blue-500 animate-pulse" />
@@ -130,11 +126,10 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
 
           <button
             onClick={onToggleTheme}
-            className={`p-2 rounded-xl border transition-colors ${
-              isDarkMode
-                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
-                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
-            }`}
+            className={`p-2 rounded-xl border transition-colors ${isDarkMode
+              ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
+              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+              }`}
             title={isDarkMode ? 'מעבר למצב בהיר' : 'מעבר למצב כהה'}
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -156,11 +151,10 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="חיפוש אירוע לפי שם..."
-          className={`w-full rounded-2xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-            isDarkMode
-              ? 'bg-slate-900/90 border border-slate-800 text-white placeholder-slate-500 shadow-inner'
-              : 'bg-white border border-slate-200 text-slate-900 placeholder-slate-400 shadow-xs'
-          }`}
+          className={`w-full rounded-2xl pr-10 pl-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isDarkMode
+            ? 'bg-slate-900/90 border border-slate-800 text-white placeholder-slate-500 shadow-inner'
+            : 'bg-white border border-slate-200 text-slate-900 placeholder-slate-400 shadow-xs'
+            }`}
         />
         {search && (
           <button
@@ -182,9 +176,8 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
           {error}
         </div>
       ) : filtered.length === 0 ? (
-        <div className={`p-8 text-center rounded-3xl border text-sm space-y-3 z-10 ${
-          isDarkMode ? 'bg-slate-900/50 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-sm'
-        }`}>
+        <div className={`p-8 text-center rounded-3xl border text-sm space-y-3 z-10 ${isDarkMode ? 'bg-slate-900/50 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-sm'
+          }`}>
           <p>לא נמצאו אירועים זמינים.</p>
           <button
             onClick={() => navigate('/planning')}
@@ -199,11 +192,10 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
             <div
               key={evt.id}
               onClick={() => navigate(`/host/${evt.id}`)}
-              className={`rounded-3xl p-4.5 border transition-all cursor-pointer flex items-center justify-between gap-3 active:scale-[0.98] group ${
-                isDarkMode
-                  ? 'bg-slate-900/80 hover:bg-slate-850 border-slate-800 hover:border-blue-500/40 shadow-lg'
-                  : 'bg-white hover:bg-slate-50/80 border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-sm'
-              }`}
+              className={`rounded-3xl p-4.5 border transition-all cursor-pointer flex items-center justify-between gap-3 active:scale-[0.98] group ${isDarkMode
+                ? 'bg-slate-900/80 hover:bg-slate-850 border-slate-800 hover:border-blue-500/40 shadow-lg'
+                : 'bg-white hover:bg-slate-50/80 border-slate-200 hover:border-blue-300 shadow-xs hover:shadow-sm'
+                }`}
             >
               <div className="overflow-hidden">
                 <h3 className="font-extrabold text-base leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
@@ -220,11 +212,10 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
                 )}
               </div>
 
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
-                isDarkMode
-                  ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:bg-blue-500/20'
-                  : 'bg-blue-50 text-blue-600 border border-blue-100 group-hover:bg-blue-100'
-              }`}>
+              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isDarkMode
+                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 group-hover:bg-blue-500/20'
+                : 'bg-blue-50 text-blue-600 border border-blue-100 group-hover:bg-blue-100'
+                }`}>
                 <ChevronRight size={18} className="rotate-180" />
               </div>
             </div>
@@ -240,8 +231,8 @@ function HostEventSelector({ isDarkMode, onToggleTheme }: { isDarkMode: boolean;
         currentVersion={APP_CURRENT_VERSION}
         apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
         apkName="CookOff-Host-Mobile.apk"
-        apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
-        apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+        apkTitle="הורדת קובץ התקנה"
+        apkDescription="מוריד את קובץ העדכון למכשיר."
         isDarkMode={isDarkMode}
       />
     </div>
@@ -286,7 +277,7 @@ function HostModeWithEvent({
   onToggleTheme: () => void;
 }) {
   const { eventInfo, guests, meals, votes, loading, error } = useFirebaseData(eventId);
-  
+
   // Authentication states
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem(`host_authed_${eventId}`) === 'true';
@@ -296,7 +287,7 @@ function HostModeWithEvent({
   const [showPinFallback, setShowPinFallback] = useState(false);
   const [pin, setPin] = useState('');
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  
+
   // Navigation & View states
   const [currentTab, setCurrentTab] = useState<TabType>('cockpit');
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
@@ -359,13 +350,13 @@ function HostModeWithEvent({
   // Timer synchronization effect
   useEffect(() => {
     if (!eventInfo) return;
-    
+
     let interval: ReturnType<typeof setInterval>;
     if (eventInfo.timerStatus === 'running' && eventInfo.timerEndTime) {
       interval = setInterval(() => {
         const remaining = Math.max(0, eventInfo.timerEndTime! - Date.now());
         setTimeRemaining(remaining);
-        
+
         if (remaining <= 0) {
           clearInterval(interval);
           handleStopTimer();
@@ -374,7 +365,7 @@ function HostModeWithEvent({
     } else {
       setTimeRemaining(null);
     }
-    
+
     return () => clearInterval(interval);
   }, [eventInfo?.timerStatus, eventInfo?.timerEndTime]);
 
@@ -590,26 +581,26 @@ function HostModeWithEvent({
     if (!eventId) return;
     try {
       const batch = writeBatch(db);
-      
+
       const votesRef = collection(db, 'events', eventId, 'votes');
       const votesSnapshot = await getDocs(votesRef);
       votesSnapshot.forEach((voteDoc) => {
         batch.delete(voteDoc.ref);
       });
-      
+
       const guestsRef = collection(db, 'events', eventId, 'guests');
       const guestsSnapshot = await getDocs(guestsRef);
       guestsSnapshot.forEach((guestDoc) => {
         batch.update(guestDoc.ref, { status: 'not_logged_in' });
       });
-      
+
       const eventRef = doc(db, 'events', eventId);
       batch.update(eventRef, {
         timerStatus: 'idle',
         timerEndTime: null,
         revealState: 'none'
       });
-      
+
       await batch.commit();
       setIsResetConfirmOpen(false);
       showSuccess('האירוע אופס בהצלחה!');
@@ -835,9 +826,8 @@ function HostModeWithEvent({
 
   if (loading) {
     return (
-      <div className={`flex-1 flex flex-col items-center justify-center min-h-screen p-6 ${
-        isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-800'
-      }`}>
+      <div className={`flex-1 flex flex-col items-center justify-center min-h-screen p-6 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-800'
+        }`}>
         <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-medium">טוען נתוני אירוע...</p>
       </div>
@@ -846,9 +836,8 @@ function HostModeWithEvent({
 
   if (error || !eventInfo) {
     return (
-      <div className={`flex-1 flex flex-col justify-center items-center min-h-screen p-6 text-center ${
-        isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
-      }`}>
+      <div className={`flex-1 flex flex-col justify-center items-center min-h-screen p-6 text-center ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
+        }`}>
         <AlertTriangle size={52} className="text-red-500 mb-4" />
         <h2 className="text-2xl font-bold mb-2">{error || "אירוע לא נמצא"}</h2>
         <p className={`text-sm mb-6 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -868,24 +857,20 @@ function HostModeWithEvent({
   // Pure Native Authentication Screen (Fingerprint / FaceID / Device Lock with PIN fallback)
   if (!isAuthenticated) {
     return (
-      <div className={`flex-1 flex flex-col items-center justify-center p-6 w-full min-h-screen relative overflow-hidden select-none transition-colors ${
-        isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
-      }`}>
+      <div className={`flex-1 flex flex-col items-center justify-center p-6 w-full min-h-screen relative overflow-hidden select-none transition-colors ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'
+        }`}>
         {/* Ambient background glows */}
-        <div className={`absolute top-[-15%] left-[-10%] w-[55%] h-[45%] rounded-full blur-[110px] pointer-events-none ${
-          isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/25'
-        }`} />
-        <div className={`absolute bottom-[-15%] right-[-10%] w-[55%] h-[45%] rounded-full blur-[110px] pointer-events-none ${
-          isDarkMode ? 'bg-purple-600/15' : 'bg-purple-400/25'
-        }`} />
+        <div className={`absolute top-[-15%] left-[-10%] w-[55%] h-[45%] rounded-full blur-[110px] pointer-events-none ${isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/25'
+          }`} />
+        <div className={`absolute bottom-[-15%] right-[-10%] w-[55%] h-[45%] rounded-full blur-[110px] pointer-events-none ${isDarkMode ? 'bg-purple-600/15' : 'bg-purple-400/25'
+          }`} />
 
         <div className="relative z-10 flex flex-col items-center w-full max-w-[340px]">
           {/* Header icon */}
-          <div className={`w-18 h-18 rounded-3xl flex items-center justify-center mb-5 shadow-lg border transition-all ${
-            isDarkMode
-              ? 'bg-slate-900 border-slate-800 text-blue-400 shadow-blue-950/40'
-              : 'bg-white border-slate-200 text-blue-600 shadow-slate-200'
-          }`}>
+          <div className={`w-18 h-18 rounded-3xl flex items-center justify-center mb-5 shadow-lg border transition-all ${isDarkMode
+            ? 'bg-slate-900 border-slate-800 text-blue-400 shadow-blue-950/40'
+            : 'bg-white border-slate-200 text-blue-600 shadow-slate-200'
+            }`}>
             <Fingerprint size={38} className="animate-pulse" />
           </div>
 
@@ -916,9 +901,8 @@ function HostModeWithEvent({
                     <button
                       type="button"
                       onClick={() => handleDeviceAuth(true)}
-                      className={`w-full text-center text-xs underline py-1 transition-colors ${
-                        isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
-                      }`}
+                      className={`w-full text-center text-xs underline py-1 transition-colors ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
+                        }`}
                     >
                       איפוס מפתח ורישום מחדש בטביעת אצבע
                     </button>
@@ -929,9 +913,8 @@ function HostModeWithEvent({
               <div className="text-center pt-2">
                 <button
                   onClick={() => setShowPinFallback(true)}
-                  className={`text-xs flex items-center justify-center gap-1.5 mx-auto font-semibold transition-colors ${
-                    isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`text-xs flex items-center justify-center gap-1.5 mx-auto font-semibold transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   <KeyRound size={14} />
                   <span>הזן קוד PIN של האירוע במקום</span>
@@ -949,9 +932,8 @@ function HostModeWithEvent({
               <div className="text-center pt-2">
                 <button
                   onClick={() => setShowPinFallback(false)}
-                  className={`text-xs flex items-center justify-center gap-1.5 mx-auto font-semibold transition-colors ${
-                    isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                  className={`text-xs flex items-center justify-center gap-1.5 mx-auto font-semibold transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'
+                    }`}
                 >
                   <Fingerprint size={14} />
                   <span>חזרה לאימות בטביעת אצבע / מכשיר</span>
@@ -963,11 +945,10 @@ function HostModeWithEvent({
           <div className="flex flex-wrap items-center justify-center gap-3 mt-10">
             <button
               onClick={() => setIsUpdateModalOpen(true)}
-              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
-                isDarkMode
-                  ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
-              }`}
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+                }`}
               title="עדכון אפליקציה"
             >
               <RefreshCw size={13} className="text-blue-500 animate-pulse" />
@@ -976,11 +957,10 @@ function HostModeWithEvent({
 
             <button
               onClick={() => navigate('/host')}
-              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
-                isDarkMode
-                  ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
-              }`}
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+                }`}
             >
               <ArrowLeftRight size={13} />
               <span>החלף אירוע</span>
@@ -988,11 +968,10 @@ function HostModeWithEvent({
 
             <button
               onClick={onToggleTheme}
-              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${
-                isDarkMode
-                  ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
-              }`}
+              className={`text-xs flex items-center gap-1.5 py-2 px-3 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
+                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-xs'
+                }`}
             >
               {isDarkMode ? <Sun size={14} /> : <Moon size={14} />}
               <span>{isDarkMode ? 'מצב בהיר' : 'מצב כהה'}</span>
@@ -1008,8 +987,8 @@ function HostModeWithEvent({
           currentVersion={APP_CURRENT_VERSION}
           apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
           apkName="CookOff-Host-Mobile.apk"
-          apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
-          apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+          apkTitle="הורדת קובץ התקנה למכשיר"
+          apkDescription="מוריד את קובץ העדכון למכשיר."
           isDarkMode={isDarkMode}
         />
       </div>
@@ -1022,24 +1001,20 @@ function HostModeWithEvent({
   const isCarouselActive = eventInfo.showMealsCarousel !== false;
 
   return (
-    <div className={`flex-1 flex flex-col w-full min-h-screen relative overflow-x-hidden font-sans select-none transition-colors duration-200 ${
-      isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
+    <div className={`flex-1 flex flex-col w-full min-h-screen relative overflow-x-hidden font-sans select-none transition-colors duration-200 ${isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      }`}>
       {/* Soft Ambient Background Glows */}
-      <div className={`fixed top-[-10%] left-[-10%] w-[50%] h-[40%] rounded-full blur-[110px] pointer-events-none ${
-        isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/20'
-      }`} />
-      <div className={`fixed bottom-[-10%] right-[-10%] w-[50%] h-[40%] rounded-full blur-[110px] pointer-events-none ${
-        isDarkMode ? 'bg-emerald-600/15' : 'bg-emerald-400/20'
-      }`} />
+      <div className={`fixed top-[-10%] left-[-10%] w-[50%] h-[40%] rounded-full blur-[110px] pointer-events-none ${isDarkMode ? 'bg-blue-600/15' : 'bg-blue-400/20'
+        }`} />
+      <div className={`fixed bottom-[-10%] right-[-10%] w-[50%] h-[40%] rounded-full blur-[110px] pointer-events-none ${isDarkMode ? 'bg-emerald-600/15' : 'bg-emerald-400/20'
+        }`} />
 
       {/* Main Container */}
       <div className="relative z-10 flex flex-col flex-1 w-full max-w-lg mx-auto pb-24">
-        
+
         {/* --- STICKY MOBILE TOP BAR --- */}
-        <header className={`sticky top-0 z-30 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between transition-colors ${
-          isDarkMode ? 'bg-slate-950/85 border-slate-800' : 'bg-white/85 border-slate-200 shadow-xs'
-        }`}>
+        <header className={`sticky top-0 z-30 backdrop-blur-md border-b px-4 py-3 flex items-center justify-between transition-colors ${isDarkMode ? 'bg-slate-950/85 border-slate-800' : 'bg-white/85 border-slate-200 shadow-xs'
+          }`}>
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
               <ChefHat size={20} />
@@ -1059,11 +1034,10 @@ function HostModeWithEvent({
             {/* Switch Event */}
             <button
               onClick={() => navigate('/host')}
-              className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-colors ${
-                isDarkMode
-                  ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
-                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`p-2 rounded-xl border text-xs font-semibold flex items-center gap-1 transition-colors ${isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                }`}
               title="החלף אירוע"
             >
               <ArrowLeftRight size={16} />
@@ -1073,11 +1047,10 @@ function HostModeWithEvent({
             {/* Light / Dark Mode Toggle */}
             <button
               onClick={onToggleTheme}
-              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                isDarkMode
-                  ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
-                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
+                : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                }`}
               title={isDarkMode ? 'מצב בהיר' : 'מצב כהה'}
             >
               {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
@@ -1102,9 +1075,8 @@ function HostModeWithEvent({
             return (
               <div className="space-y-4 animate-in fade-in duration-200">
                 {/* 1. STAGE DIRECTOR HERO BANNER (Shown in all stages) */}
-                <div className={`rounded-3xl p-5 border space-y-3.5 transition-all ${
-                  isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                }`}>
+                <div className={`rounded-3xl p-5 border space-y-3.5 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                  }`}>
                   {/* Current stage header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -1157,11 +1129,10 @@ function HostModeWithEvent({
                     {prevStageDef && (
                       <button
                         onClick={() => handleSetStage(prevStageDef.id)}
-                        className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                          isDarkMode
-                            ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white'
-                            : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                        }`}
+                        className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
+                          ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white'
+                          : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                          }`}
                       >
                         <ArrowRight size={14} />
                         <span>חזרה לשלב קודם: {prevStageDef.name}</span>
@@ -1179,13 +1150,12 @@ function HostModeWithEvent({
                           <button
                             key={stage.id}
                             onClick={() => handleSetStage(stage.id)}
-                            className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                              isActive
-                                ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/50'
-                                : isDarkMode
+                            className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${isActive
+                              ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/50'
+                              : isDarkMode
                                 ? 'bg-slate-800/70 border border-slate-700/60 text-slate-300 hover:bg-slate-800'
                                 : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                            }`}
+                              }`}
                           >
                             <span>{stage.icon}</span>
                             <span>{stage.name}</span>
@@ -1200,9 +1170,8 @@ function HostModeWithEvent({
                 {currentStageId === 'A' && (
                   <>
                     {/* Gallery Toggle */}
-                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                    }`}>
+                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           {isCarouselActive ? <Eye size={20} className="text-emerald-500" /> : <EyeOff size={20} className="text-slate-400" />}
@@ -1216,13 +1185,12 @@ function HostModeWithEvent({
 
                         <button
                           onClick={handleToggleMealsCarousel}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
-                            isCarouselActive
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
-                              : isDarkMode
+                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${isCarouselActive
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                            : isDarkMode
                               ? 'bg-slate-800 text-slate-300 border-slate-700'
                               : 'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
+                            }`}
                         >
                           {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
                         </button>
@@ -1240,11 +1208,10 @@ function HostModeWithEvent({
                       </button>
                       <button
                         onClick={() => copyToClipboard(voterLink, 'קישור ההצבעה')}
-                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${
-                          isDarkMode
-                            ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
-                            : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
-                        }`}
+                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
+                          ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
+                          }`}
                       >
                         <Copy size={16} />
                         <span>העתק קישור</span>
@@ -1257,24 +1224,22 @@ function HostModeWithEvent({
                 {currentStageId === 'B' && (
                   <>
                     {/* Timer Card */}
-                    <div className={`rounded-3xl p-5 border relative overflow-hidden transition-all ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                    }`}>
+                    <div className={`rounded-3xl p-5 border relative overflow-hidden transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                      }`}>
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <Clock size={20} className="text-blue-500" />
                           <span className="font-extrabold text-lg">טיימר הצבעה</span>
                         </div>
 
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                          eventInfo.timerStatus === 'running'
-                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
-                            : eventInfo.timerStatus === 'ended'
+                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${eventInfo.timerStatus === 'running'
+                          ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
+                          : eventInfo.timerStatus === 'ended'
                             ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
                             : isDarkMode
-                            ? 'bg-slate-800 text-slate-400 border-slate-700'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}>
+                              ? 'bg-slate-800 text-slate-400 border-slate-700'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
                           {eventInfo.timerStatus === 'running' ? 'פועל עכשיו' : eventInfo.timerStatus === 'ended' ? 'הסתיים' : 'ממתין להפעלה'}
                         </span>
                       </div>
@@ -1283,9 +1248,8 @@ function HostModeWithEvent({
                       {eventInfo.timerStatus === 'running' ? (
                         <div className="flex flex-col items-center py-2">
                           <div className="relative my-2">
-                            <span className={`text-6xl font-black font-mono tracking-tight drop-shadow-sm ${
-                              timeRemaining !== null && timeRemaining < 60000 ? 'text-red-500 animate-pulse' : 'text-blue-600 dark:text-blue-400'
-                            }`}>
+                            <span className={`text-6xl font-black font-mono tracking-tight drop-shadow-sm ${timeRemaining !== null && timeRemaining < 60000 ? 'text-red-500 animate-pulse' : 'text-blue-600 dark:text-blue-400'
+                              }`}>
                               {timeRemaining !== null ? formatTime(timeRemaining) : '00:00'}
                             </span>
                           </div>
@@ -1294,22 +1258,20 @@ function HostModeWithEvent({
                           <div className="grid grid-cols-2 gap-3 w-full my-4">
                             <button
                               onClick={() => handleExtendTimer(1)}
-                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${
-                                isDarkMode
-                                  ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
-                                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                              }`}
+                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${isDarkMode
+                                ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                                }`}
                             >
                               <Plus size={16} className="text-blue-500" />
                               <span>דקה אחת (+1)</span>
                             </button>
                             <button
                               onClick={() => handleExtendTimer(5)}
-                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${
-                                isDarkMode
-                                  ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
-                                  : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
-                              }`}
+                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${isDarkMode
+                                ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
+                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
+                                }`}
                             >
                               <Plus size={16} className="text-blue-500" />
                               <span>5 דקות (+5)</span>
@@ -1328,16 +1290,14 @@ function HostModeWithEvent({
                       ) : (
                         /* Timer idle / ended: stepper + presets + start */
                         <div className="space-y-4 py-1">
-                          <div className={`flex items-center justify-between rounded-2xl p-3 border ${
-                            isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                          }`}>
+                          <div className={`flex items-center justify-between rounded-2xl p-3 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                            }`}>
                             <button
                               onClick={() => setTimerMinutes((m) => Math.max(1, m - 1))}
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${
-                                isDarkMode
-                                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
-                                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
-                              }`}
+                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
+                                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
+                                : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
+                                }`}
                             >
                               <Minus size={20} />
                             </button>
@@ -1349,11 +1309,10 @@ function HostModeWithEvent({
 
                             <button
                               onClick={() => setTimerMinutes((m) => m + 1)}
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${
-                                isDarkMode
-                                  ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
-                                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
-                              }`}
+                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
+                                ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
+                                : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
+                                }`}
                             >
                               <Plus size={20} />
                             </button>
@@ -1364,13 +1323,12 @@ function HostModeWithEvent({
                               <button
                                 key={preset}
                                 onClick={() => setTimerMinutes(preset)}
-                                className={`py-2 rounded-xl font-bold text-xs transition-all border cursor-pointer ${
-                                  timerMinutes === preset
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                    : isDarkMode
+                                className={`py-2 rounded-xl font-bold text-xs transition-all border cursor-pointer ${timerMinutes === preset
+                                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                  : isDarkMode
                                     ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
                                     : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                                }`}
+                                  }`}
                               >
                                 {preset} דק'
                               </button>
@@ -1389,9 +1347,8 @@ function HostModeWithEvent({
                     </div>
 
                     {/* Live Voting Pulse */}
-                    <div className={`rounded-3xl p-5 border transition-all ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                    }`}>
+                    <div className={`rounded-3xl p-5 border transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                      }`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <Users size={20} className="text-emerald-500" />
@@ -1416,9 +1373,8 @@ function HostModeWithEvent({
                           </span>
                         </div>
 
-                        <div className={`w-full h-3 rounded-full border overflow-hidden p-0.5 ${
-                          isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-                        }`}>
+                        <div className={`w-full h-3 rounded-full border overflow-hidden p-0.5 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+                          }`}>
                           <div
                             className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
                             style={{ width: `${progressPercent}%` }}
@@ -1453,11 +1409,10 @@ function HostModeWithEvent({
                       </button>
                       <button
                         onClick={() => copyToClipboard(voterLink, 'קישור ההצבעה')}
-                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${
-                          isDarkMode
-                            ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
-                            : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
-                        }`}
+                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
+                          ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
+                          }`}
                       >
                         <Copy size={16} />
                         <span>העתק קישור</span>
@@ -1465,9 +1420,8 @@ function HostModeWithEvent({
                     </div>
 
                     {/* Informative Note regarding C and D being automatic */}
-                    <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
-                      isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-800'
-                    }`}>
+                    <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-800'
+                      }`}>
                       <Sparkles size={18} className="shrink-0 mt-0.5 text-blue-400" />
                       <p className="text-xs leading-relaxed">
                         <strong>השלבים הבאים יפעלו אוטומטית:</strong> ב-10 השניות האחרונות לטיימר תופעל בטלוויזיה ספירה לאחור דרמטית עם רעד מסך, ומיד לאחריה תופיע הודעת סיום הזמן (00:00).
@@ -1478,9 +1432,8 @@ function HostModeWithEvent({
 
                 {/* STAGE C & D: Automatic Stages */}
                 {(currentStageId === 'C' || currentStageId === 'D') && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${
-                    isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}>
+                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}>
                     <div className="w-14 h-14 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
                       {currentStageId === 'C' ? '⚡' : '🛑'}
                     </div>
@@ -1500,9 +1453,8 @@ function HostModeWithEvent({
 
                 {/* STAGE E: Emblem + Flavor Text (no action needed) */}
                 {currentStageId === 'E' && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${
-                    isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}>
+                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}>
                     <div className="w-16 h-16 rounded-2xl bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center justify-center mx-auto text-3xl">
                       ✨
                     </div>
@@ -1518,9 +1470,8 @@ function HostModeWithEvent({
 
                 {/* STAGES F, G, H, I: Results and Podium reveals (no actions needed) */}
                 {(currentStageId === 'F' || currentStageId === 'G' || currentStageId === 'H' || currentStageId === 'I') && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${
-                    isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                  }`}>
+                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                    }`}>
                     <div className="w-16 h-16 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-3xl">
                       {currentStageDef.icon}
                     </div>
@@ -1540,9 +1491,8 @@ function HostModeWithEvent({
                 {/* STAGE J: Background Only + Show/Hide Gallery */}
                 {currentStageId === 'J' && (
                   <div className="space-y-4">
-                    <div className={`rounded-3xl p-6 border text-center space-y-3 ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}>
+                    <div className={`rounded-3xl p-6 border text-center space-y-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+                      }`}>
                       <div className="w-16 h-16 rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center mx-auto text-3xl">
                         🌌
                       </div>
@@ -1553,9 +1503,8 @@ function HostModeWithEvent({
                     </div>
 
                     {/* Show/Hide Gallery in Stage J */}
-                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                    }`}>
+                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                      }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           {isCarouselActive ? <Eye size={20} className="text-emerald-500" /> : <EyeOff size={20} className="text-slate-400" />}
@@ -1569,13 +1518,12 @@ function HostModeWithEvent({
 
                         <button
                           onClick={handleToggleMealsCarousel}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${
-                            isCarouselActive
-                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
-                              : isDarkMode
+                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${isCarouselActive
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                            : isDarkMode
                               ? 'bg-slate-800 text-slate-300 border-slate-700'
                               : 'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
+                            }`}
                         >
                           {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
                         </button>
@@ -1592,11 +1540,10 @@ function HostModeWithEvent({
           {/* ==================================================== */}
           {currentTab === 'voters' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              
+
               {/* Header & Quick Actions */}
-              <div className={`rounded-3xl p-5 border space-y-3.5 transition-all ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-3.5 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users size={20} className="text-emerald-500" />
@@ -1619,11 +1566,10 @@ function HostModeWithEvent({
 
                   <button
                     onClick={() => setIsManageMealsModalOpen(true)}
-                    className={`py-3 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${
-                      isDarkMode
-                        ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-750'
-                        : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
-                    }`}
+                    className={`py-3 px-3 rounded-2xl border text-xs font-bold flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
+                      ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-750'
+                      : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
+                      }`}
                   >
                     <UtensilsCrossed size={16} />
                     <span>ניהול והסרת מנות ({meals.length})</span>
@@ -1638,11 +1584,10 @@ function HostModeWithEvent({
                     value={voterSearch}
                     onChange={(e) => setVoterSearch(e.target.value)}
                     placeholder="חיפוש לפי שם משתתף או משק בית..."
-                    className={`w-full rounded-2xl pr-10 pl-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
-                      isDarkMode
-                        ? 'bg-slate-950/60 border border-slate-800 text-white placeholder-slate-500'
-                        : 'bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400'
-                    }`}
+                    className={`w-full rounded-2xl pr-10 pl-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${isDarkMode
+                      ? 'bg-slate-950/60 border border-slate-800 text-white placeholder-slate-500'
+                      : 'bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
                   />
                   {voterSearch && (
                     <button
@@ -1658,37 +1603,34 @@ function HostModeWithEvent({
                 <div className="flex gap-2">
                   <button
                     onClick={() => setVoterFilter('all')}
-                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      voterFilter === 'all'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : isDarkMode
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${voterFilter === 'all'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : isDarkMode
                         ? 'bg-slate-800/80 border-slate-700 text-slate-300'
                         : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                      }`}
                   >
                     הכל ({activeGuests.length})
                   </button>
                   <button
                     onClick={() => setVoterFilter('pending')}
-                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      voterFilter === 'pending'
-                        ? 'bg-amber-500 text-black border-amber-500 font-extrabold shadow-xs'
-                        : isDarkMode
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${voterFilter === 'pending'
+                      ? 'bg-amber-500 text-black border-amber-500 font-extrabold shadow-xs'
+                      : isDarkMode
                         ? 'bg-slate-800/80 border-slate-700 text-slate-300'
                         : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                      }`}
                   >
                     ממתינים ({pendingGuests})
                   </button>
                   <button
                     onClick={() => setVoterFilter('done')}
-                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      voterFilter === 'done'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : isDarkMode
+                    className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${voterFilter === 'done'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                      : isDarkMode
                         ? 'bg-slate-800/80 border-slate-700 text-slate-300'
                         : 'bg-slate-50 border-slate-200 text-slate-600'
-                    }`}
+                      }`}
                   >
                     סיימו ({doneGuests})
                   </button>
@@ -1704,22 +1646,20 @@ function HostModeWithEvent({
                   return (
                     <div
                       key={guest.id}
-                      className={`rounded-2xl p-3.5 flex items-center justify-between gap-3 border transition-all ${
-                        isDarkMode
-                          ? 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
-                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                      }`}
+                      className={`rounded-2xl p-3.5 flex items-center justify-between gap-3 border transition-all ${isDarkMode
+                        ? 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                        }`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
-                          status === 'done'
-                            ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
-                            : status === 'voting'
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${status === 'done'
+                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                          : status === 'voting'
                             ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
                             : isDarkMode
-                            ? 'bg-slate-800 border-slate-700 text-slate-400'
-                            : 'bg-slate-100 border-slate-200 text-slate-500'
-                        }`}>
+                              ? 'bg-slate-800 border-slate-700 text-slate-400'
+                              : 'bg-slate-100 border-slate-200 text-slate-500'
+                          }`}>
                           {status === 'done' ? (
                             <CheckCircle2 size={20} />
                           ) : status === 'voting' ? (
@@ -1738,9 +1678,8 @@ function HostModeWithEvent({
 
                           <div className="flex flex-wrap items-center gap-2 mt-1">
                             {/* PIN Code Badge */}
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border ${
-                              isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                              }`}>
                               <KeyRound size={11} className="text-amber-500" />
                               <span>PIN: {guest.pin || '----'}</span>
                             </span>
@@ -1762,25 +1701,23 @@ function HostModeWithEvent({
 
                       {/* Status & Edit Button */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${
-                          status === 'done'
-                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                            : status === 'voting'
+                        <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${status === 'done'
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                          : status === 'voting'
                             ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
                             : isDarkMode
-                            ? 'bg-slate-800 text-slate-400 border-slate-700'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}>
+                              ? 'bg-slate-800 text-slate-400 border-slate-700'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
                           {status === 'done' ? 'הצביע' : status === 'voting' ? 'מצביע' : 'ממתין'}
                         </span>
 
                         <button
                           onClick={() => setEditingGuest(guest)}
-                          className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                            isDarkMode
-                              ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-750'
-                              : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                          }`}
+                          className={`p-2 rounded-xl border transition-colors cursor-pointer ${isDarkMode
+                            ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-750'
+                            : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                            }`}
                           title="ערוך משתתף, PIN ושיוך למנה"
                         >
                           <Edit3 size={15} />
@@ -1791,9 +1728,8 @@ function HostModeWithEvent({
                 })}
 
                 {filteredGuests.length === 0 && (
-                  <div className={`text-center py-12 rounded-3xl border border-dashed p-6 ${
-                    isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-xs'
-                  }`}>
+                  <div className={`text-center py-12 rounded-3xl border border-dashed p-6 ${isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-xs'
+                    }`}>
                     <Users size={36} className="mx-auto text-slate-400 mb-2 opacity-50" />
                     <p className="text-sm font-medium">לא נמצאו משתתפים תואמים לסינון</p>
                   </div>
@@ -1808,11 +1744,10 @@ function HostModeWithEvent({
           {/* ==================================================== */}
           {currentTab === 'results' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              
+
               {/* Standings Header */}
-              <div className={`rounded-3xl p-5 border space-y-1.5 transition-all ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-1.5 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Trophy size={22} className="text-amber-500" />
@@ -1833,25 +1768,23 @@ function HostModeWithEvent({
                   <div
                     key={meal.id}
                     onClick={() => setSelectedMealForVotes(meal)}
-                    className={`rounded-2xl p-4 flex items-center justify-between gap-3 border transition-all cursor-pointer active:scale-[0.99] ${
-                      isDarkMode
-                        ? 'bg-slate-900/70 border-slate-800 hover:border-slate-700 hover:bg-slate-850/80 shadow-md'
-                        : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 shadow-xs'
-                    }`}
+                    className={`rounded-2xl p-4 flex items-center justify-between gap-3 border transition-all cursor-pointer active:scale-[0.99] ${isDarkMode
+                      ? 'bg-slate-900/70 border-slate-800 hover:border-slate-700 hover:bg-slate-850/80 shadow-md'
+                      : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-blue-50/20 shadow-xs'
+                      }`}
                   >
                     <div className="flex items-center gap-3.5 overflow-hidden">
                       {/* Rank Medal / Number */}
-                      <span className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-xs ${
-                        index === 0
-                          ? 'bg-amber-400 text-black shadow-amber-400/20 text-base'
-                          : index === 1
+                      <span className={`w-9 h-9 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-xs ${index === 0
+                        ? 'bg-amber-400 text-black shadow-amber-400/20 text-base'
+                        : index === 1
                           ? 'bg-slate-300 text-slate-900 text-base'
                           : index === 2
-                          ? 'bg-amber-700 text-white text-base'
-                          : isDarkMode
-                          ? 'bg-slate-800 text-slate-400 border border-slate-700 font-mono'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200 font-mono'
-                      }`}>
+                            ? 'bg-amber-700 text-white text-base'
+                            : isDarkMode
+                              ? 'bg-slate-800 text-slate-400 border border-slate-700 font-mono'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200 font-mono'
+                        }`}>
                         {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                       </span>
 
@@ -1898,9 +1831,8 @@ function HostModeWithEvent({
                 ))}
 
                 {mealScores.length === 0 && (
-                  <div className={`text-center py-12 rounded-3xl border border-dashed p-6 ${
-                    isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-xs'
-                  }`}>
+                  <div className={`text-center py-12 rounded-3xl border border-dashed p-6 ${isDarkMode ? 'bg-slate-900/40 border-slate-800 text-slate-400' : 'bg-white border-slate-200 text-slate-500 shadow-xs'
+                    }`}>
                     <Trophy size={36} className="mx-auto text-slate-400 mb-2 opacity-50" />
                     <p className="text-sm font-medium">אין מנות משתתפות כעת</p>
                   </div>
@@ -1915,11 +1847,10 @@ function HostModeWithEvent({
           {/* ==================================================== */}
           {currentTab === 'tools' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              
+
               {/* 1. PLANNER MODE LAUNCHER */}
-              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <div className="flex items-center gap-2">
                   <Sliders size={20} className="text-purple-500" />
                   <h3 className="font-extrabold text-lg">מצב תכנון האירוע</h3>
@@ -1937,9 +1868,8 @@ function HostModeWithEvent({
               </div>
 
               {/* 2. DANGER ZONE: EVENT RESET */}
-              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
-                isDarkMode ? 'bg-rose-950/20 border-rose-900/40' : 'bg-rose-50/50 border-rose-200'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-rose-950/20 border-rose-900/40' : 'bg-rose-50/50 border-rose-200'
+                }`}>
                 <div className="flex items-center gap-2 text-rose-500">
                   <AlertTriangle size={20} />
                   <h3 className="font-extrabold text-lg">אזור סכנה: איפוס אירוע</h3>
@@ -1957,18 +1887,16 @@ function HostModeWithEvent({
               </div>
 
               {/* 3. LINKS & SHARING */}
-              <div className={`rounded-3xl p-5 border space-y-4 transition-all ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-4 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <div className="flex items-center gap-2">
                   <Share2 size={20} className="text-emerald-500" />
                   <h2 className="font-extrabold text-lg">קישורים ושיתוף</h2>
                 </div>
 
                 {/* Voters Link */}
-                <div className={`rounded-2xl p-3.5 space-y-2 border ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}>
+                <div className={`rounded-2xl p-3.5 space-y-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}>
                   <div className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>קישור הצבעה לאורחים:</div>
                   <div className="flex gap-2">
                     <button
@@ -1980,11 +1908,10 @@ function HostModeWithEvent({
                     </button>
                     <button
                       onClick={() => copyToClipboard(voterLink, 'קישור הצבעה')}
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                        isDarkMode
-                          ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
-                          : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-100 shadow-xs'
-                      }`}
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
+                        ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
+                        : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-100 shadow-xs'
+                        }`}
                     >
                       <Copy size={14} />
                       <span>העתק</span>
@@ -1993,9 +1920,8 @@ function HostModeWithEvent({
                 </div>
 
                 {/* TV Link */}
-                <div className={`rounded-2xl p-3.5 space-y-2 border ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}>
+                <div className={`rounded-2xl p-3.5 space-y-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}>
                   <div className={`text-xs font-semibold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>קישור תצוגה לטלוויזיה החכמה:</div>
                   <div className="flex gap-2">
                     <button
@@ -2009,11 +1935,10 @@ function HostModeWithEvent({
                       href={tvLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                        isDarkMode
-                          ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
-                          : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-100 shadow-xs'
-                      }`}
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
+                        ? 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
+                        : 'bg-white border-slate-200 text-slate-800 hover:bg-slate-100 shadow-xs'
+                        }`}
                     >
                       <ExternalLink size={14} />
                       <span>פתח</span>
@@ -2023,22 +1948,20 @@ function HostModeWithEvent({
               </div>
 
               {/* 4. APP UPDATE CARD */}
-              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${
-                isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-              }`}>
+              <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
+                }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <RefreshCw size={20} className="text-blue-500" />
                     <h3 className="font-extrabold text-lg">עדכון אפליקציה</h3>
                   </div>
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${
-                    isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-200'
-                  }`}>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold border ${isDarkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-600 border-blue-200'
+                    }`}>
                     {APP_CURRENT_VERSION}
                   </span>
                 </div>
                 <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                  בדיקת עדכונים ב-GitHub, רענון גרסת Web מהיר (PWA) או הורדת קובץ APK מעודכן למכשיר.
+                  בדיקת עדכונים, רענון גרסה מהיר או הורדת קובץ עדכון למכשיר.
                 </p>
                 <button
                   onClick={() => setIsUpdateModalOpen(true)}
@@ -2055,17 +1978,15 @@ function HostModeWithEvent({
         </main>
 
         {/* --- FIXED BOTTOM NAVIGATION BAR --- */}
-        <nav className={`fixed bottom-0 inset-x-0 z-30 backdrop-blur-xl border-t px-3 py-2 flex items-center justify-around max-w-lg mx-auto shadow-lg transition-colors ${
-          isDarkMode ? 'bg-slate-950/90 border-slate-800' : 'bg-white/95 border-slate-200'
-        }`}>
+        <nav className={`fixed bottom-0 inset-x-0 z-30 backdrop-blur-xl border-t px-3 py-2 flex items-center justify-around max-w-lg mx-auto shadow-lg transition-colors ${isDarkMode ? 'bg-slate-950/90 border-slate-800' : 'bg-white/95 border-slate-200'
+          }`}>
           {/* Cockpit Tab */}
           <button
             onClick={() => setCurrentTab('cockpit')}
-            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
-              currentTab === 'cockpit'
-                ? 'text-blue-600 dark:text-blue-400 font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${currentTab === 'cockpit'
+              ? 'text-blue-600 dark:text-blue-400 font-extrabold scale-105'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
           >
             <Sliders size={20} className={currentTab === 'cockpit' ? 'stroke-[2.5]' : ''} />
             <span className="text-[11px]">בקרה</span>
@@ -2074,11 +1995,10 @@ function HostModeWithEvent({
           {/* Voters Tab */}
           <button
             onClick={() => setCurrentTab('voters')}
-            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all relative cursor-pointer ${
-              currentTab === 'voters'
-                ? 'text-emerald-600 dark:text-emerald-400 font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all relative cursor-pointer ${currentTab === 'voters'
+              ? 'text-emerald-600 dark:text-emerald-400 font-extrabold scale-105'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
           >
             <Users size={20} className={currentTab === 'voters' ? 'stroke-[2.5]' : ''} />
             <span className="text-[11px]">משתתפים</span>
@@ -2090,11 +2010,10 @@ function HostModeWithEvent({
           {/* Results Tab (Renamed from תוצאות TV to תוצאות) */}
           <button
             onClick={() => setCurrentTab('results')}
-            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
-              currentTab === 'results'
-                ? 'text-amber-500 font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${currentTab === 'results'
+              ? 'text-amber-500 font-extrabold scale-105'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
           >
             <Trophy size={20} className={currentTab === 'results' ? 'stroke-[2.5]' : ''} />
             <span className="text-[11px]">תוצאות</span>
@@ -2103,11 +2022,10 @@ function HostModeWithEvent({
           {/* Tools Tab */}
           <button
             onClick={() => setCurrentTab('tools')}
-            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${
-              currentTab === 'tools'
-                ? 'text-indigo-600 dark:text-indigo-400 font-extrabold scale-105'
-                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-            }`}
+            className={`flex flex-col items-center gap-1 py-1.5 px-3 rounded-2xl transition-all cursor-pointer ${currentTab === 'tools'
+              ? 'text-indigo-600 dark:text-indigo-400 font-extrabold scale-105'
+              : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+              }`}
           >
             <Share2 size={20} className={currentTab === 'tools' ? 'stroke-[2.5]' : ''} />
             <span className="text-[11px]">כלים</span>
@@ -2116,14 +2034,13 @@ function HostModeWithEvent({
 
         {/* --- DANGER ZONE RESET CONFIRM MODAL --- */}
         {isResetConfirmOpen && (
-          <div 
+          <div
             className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 cursor-pointer"
             onClick={() => setIsResetConfirmOpen(false)}
           >
-            <div 
-              className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200 border cursor-default ${
-                isDarkMode ? 'bg-slate-900 border-rose-500/40 text-white' : 'bg-white border-rose-200 text-slate-900'
-              }`}
+            <div
+              className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-200 border cursor-default ${isDarkMode ? 'bg-slate-900 border-rose-500/40 text-white' : 'bg-white border-rose-200 text-slate-900'
+                }`}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-500">
@@ -2149,9 +2066,8 @@ function HostModeWithEvent({
                 </button>
                 <button
                   onClick={() => setIsResetConfirmOpen(false)}
-                  className={`w-full py-3 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
-                    isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
+                  className={`w-full py-3 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
                 >
                   ביטול
                 </button>
@@ -2206,8 +2122,8 @@ function HostModeWithEvent({
           currentVersion={APP_CURRENT_VERSION}
           apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-Host-Mobile.apk"
           apkName="CookOff-Host-Mobile.apk"
-          apkTitle="הורדת קובץ התקנה למכשיר נייד (APK)"
-          apkDescription="מוריד את קובץ ה-APK המעודכן (CookOff-Host-Mobile.apk) להתקנה ישירה על מכשיר אנדרואיד."
+          apkTitle="הורדת קובץ עדכון למכשיר"
+          apkDescription="מוריד את קובץ העדכון למכשיר."
           isDarkMode={isDarkMode}
         />
 
@@ -2264,9 +2180,8 @@ function AddVoterModal({
       onClick={onClose}
     >
       <div
-        className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 border cursor-default ${
-          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}
+        className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 border cursor-default ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -2290,9 +2205,8 @@ function AddVoterModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="לדוגמה: יונתן כהן"
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             />
           </div>
 
@@ -2305,9 +2219,8 @@ function AddVoterModal({
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
               placeholder="1234"
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             />
           </div>
 
@@ -2318,9 +2231,8 @@ function AddVoterModal({
               value={householdName}
               onChange={(e) => setHouseholdName(e.target.value)}
               placeholder="משפחת כהן (ברירת מחדל: שם המשתתף)"
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             />
           </div>
 
@@ -2329,9 +2241,8 @@ function AddVoterModal({
             <select
               value={mealId}
               onChange={(e) => setMealId(e.target.value)}
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             >
               <option value="">ללא שיוך למנה (מצביע רגיל)</option>
               {meals.map((m) => (
@@ -2353,9 +2264,8 @@ function AddVoterModal({
             <button
               type="button"
               onClick={onClose}
-              className={`px-4 py-3 rounded-xl text-xs font-semibold cursor-pointer ${
-                isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`px-4 py-3 rounded-xl text-xs font-semibold cursor-pointer ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
             >
               ביטול
             </button>
@@ -2415,9 +2325,8 @@ function EditVoterModal({
       onClick={onClose}
     >
       <div
-        className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 border cursor-default ${
-          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}
+        className={`rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 border cursor-default ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -2440,9 +2349,8 @@ function EditVoterModal({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             />
           </div>
 
@@ -2453,9 +2361,8 @@ function EditVoterModal({
               required
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             />
           </div>
 
@@ -2464,9 +2371,8 @@ function EditVoterModal({
             <select
               value={mealId}
               onChange={(e) => setMealId(e.target.value)}
-              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${
-                isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-              }`}
+              className={`w-full rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 border ${isDarkMode ? 'bg-slate-950/80 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
+                }`}
             >
               <option value="">ללא שיוך למנה</option>
               {meals.map((m) => (
@@ -2526,9 +2432,8 @@ function ManageMealsModal({
       onClick={onClose}
     >
       <div
-        className={`rounded-3xl p-5 max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border cursor-default ${
-          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}
+        className={`rounded-3xl p-5 max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border cursor-default ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -2554,9 +2459,8 @@ function ManageMealsModal({
             return (
               <div
                 key={meal.id}
-                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}
               >
                 <div className="flex items-center gap-3 overflow-hidden">
                   {meal.imageUrl ? (
@@ -2599,9 +2503,8 @@ function ManageMealsModal({
         <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             onClick={onClose}
-            className={`w-full py-2.5 rounded-xl text-xs font-semibold cursor-pointer ${
-              isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            className={`w-full py-2.5 rounded-xl text-xs font-semibold cursor-pointer ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
           >
             סגור
           </button>
@@ -2639,9 +2542,8 @@ function MealVotesModal({
       onClick={onClose}
     >
       <div
-        className={`rounded-3xl p-5 max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border cursor-default ${
-          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-        }`}
+        className={`rounded-3xl p-5 max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl border cursor-default ${isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with image */}
@@ -2680,15 +2582,13 @@ function MealVotesModal({
 
         {/* Votes Summary Pills */}
         <div className="grid grid-cols-2 gap-2 pt-3">
-          <div className={`p-2.5 rounded-xl border text-center ${
-            isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'
-          }`}>
+          <div className={`p-2.5 rounded-xl border text-center ${isDarkMode ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-800'
+            }`}>
             <span className="text-xs font-bold block">🥇 מקום ראשון (3 נק׳)</span>
             <span className="text-lg font-black font-mono">{firstPlaceVotes.length}</span>
           </div>
-          <div className={`p-2.5 rounded-xl border text-center ${
-            isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-          }`}>
+          <div className={`p-2.5 rounded-xl border text-center ${isDarkMode ? 'bg-slate-800/80 border-slate-700 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+            }`}>
             <span className="text-xs font-bold block">🥈 מקום שני (2 נק׳)</span>
             <span className="text-lg font-black font-mono">{secondPlaceVotes.length}</span>
           </div>
@@ -2709,9 +2609,8 @@ function MealVotesModal({
             return (
               <div
                 key={vote.id || `${vote.guestId}_${vote.mealId}`}
-                className={`p-3 rounded-2xl border flex items-center justify-between gap-2 ${
-                  isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-2 ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}
               >
                 <div>
                   <div className="font-bold text-sm">{voterName}</div>
@@ -2722,13 +2621,12 @@ function MealVotesModal({
                   )}
                 </div>
 
-                <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border shrink-0 ${
-                  isFirst
-                    ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30'
-                    : isDarkMode
+                <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border shrink-0 ${isFirst
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                  : isDarkMode
                     ? 'bg-slate-800 text-slate-300 border-slate-700'
                     : 'bg-slate-100 text-slate-700 border-slate-200'
-                }`}>
+                  }`}>
                   {isFirst ? '🥇 מקום ראשון (+3)' : '🥈 מקום שני (+2)'}
                 </span>
               </div>
@@ -2745,9 +2643,8 @@ function MealVotesModal({
         <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
           <button
             onClick={onClose}
-            className={`w-full py-2.5 rounded-xl text-xs font-semibold cursor-pointer ${
-              isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+            className={`w-full py-2.5 rounded-xl text-xs font-semibold cursor-pointer ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
           >
             סגור
           </button>

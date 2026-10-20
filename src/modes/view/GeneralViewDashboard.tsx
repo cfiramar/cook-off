@@ -178,7 +178,7 @@ export default function GeneralViewDashboard() {
               events.map((event, idx) => {
                 const isLast = event.id === lastEventId;
                 return (
-                  <div 
+                  <div
                     key={event.id}
                     ref={idx === 0 ? firstCardRef : undefined}
                     tabIndex={0}
@@ -190,11 +190,10 @@ export default function GeneralViewDashboard() {
                         selectEvent(event.id);
                       }
                     }}
-                    className={`bg-gray-900/80 backdrop-blur-xl rounded-3xl border p-6 flex flex-col transition-all duration-200 transform cursor-pointer relative overflow-hidden group outline-none ${
-                      isLast 
-                        ? 'border-blue-500/80 shadow-lg shadow-blue-500/20' 
+                    className={`bg-gray-900/80 backdrop-blur-xl rounded-3xl border p-6 flex flex-col transition-all duration-200 transform cursor-pointer relative overflow-hidden group outline-none ${isLast
+                        ? 'border-blue-500/80 shadow-lg shadow-blue-500/20'
                         : 'border-gray-800 hover:border-gray-700'
-                    } hover:scale-[1.02] hover:shadow-2xl hover:border-blue-400 focus:scale-[1.04] focus:ring-4 focus:ring-blue-400 focus:border-blue-400 focus:shadow-[0_0_40px_rgba(59,130,246,0.6)]`}
+                      } hover:scale-[1.02] hover:shadow-2xl hover:border-blue-400 focus:scale-[1.04] focus:ring-4 focus:ring-blue-400 focus:border-blue-400 focus:shadow-[0_0_40px_rgba(59,130,246,0.6)]`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
@@ -209,7 +208,7 @@ export default function GeneralViewDashboard() {
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-gray-400 mb-4 text-sm font-medium">
                         <Calendar size={16} className="text-blue-400" />
                         <span>{formatDate(event.date)}</span>
@@ -248,7 +247,7 @@ export default function GeneralViewDashboard() {
         apkDownloadUrl="https://github.com/cfiramar/cook-off/releases/latest/download/CookOff-AndroidTV-ViewMode.apk"
         apkName="CookOff-AndroidTV-ViewMode.apk"
         apkTitle="הורדת קובץ התקנה לטלוויזיה (APK)"
-        apkDescription="מוריד את קובץ ה-APK המלא (CookOff-AndroidTV-ViewMode.apk) להתקנה על Android TV."
+        apkDescription="מוריד את קובץ ה-APK להתקנה על Android TV."
         isDarkMode={true}
       />
     </div>

@@ -175,21 +175,19 @@ export default function AppUpdateModal({
     >
       <div
         ref={modalRef}
-        className={`border rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative flex flex-col gap-6 text-right animate-in zoom-in-95 duration-200 ${
-          isDarkMode
-            ? 'bg-gray-900 border-gray-700 text-white'
-            : 'bg-white border-slate-200 text-slate-900'
-        }`}
+        className={`border rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative flex flex-col gap-6 text-right animate-in zoom-in-95 duration-200 ${isDarkMode
+          ? 'bg-gray-900 border-gray-700 text-white'
+          : 'bg-white border-slate-200 text-slate-900'
+          }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close "X" button */}
         <button
           onClick={onClose}
-          className={`absolute top-5 left-5 p-2 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${
-            isDarkMode
-              ? 'text-gray-400 hover:text-white hover:bg-gray-800'
-              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
-          }`}
+          className={`absolute top-5 left-5 p-2 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 cursor-pointer ${isDarkMode
+            ? 'text-gray-400 hover:text-white hover:bg-gray-800'
+            : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+            }`}
           aria-label="סגור חלון"
         >
           <X className="w-5 h-5" />
@@ -226,9 +224,8 @@ export default function AppUpdateModal({
             </div>
 
             <div
-              className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${
-                isDarkMode ? 'bg-gray-950/60 border-gray-800' : 'bg-slate-50 border-slate-200'
-              }`}
+              className={`p-4 rounded-2xl border flex flex-col gap-1.5 ${isDarkMode ? 'bg-gray-950/60 border-gray-800' : 'bg-slate-50 border-slate-200'
+                }`}
             >
               <div className="flex justify-between items-center text-sm font-semibold">
                 <span className="text-gray-400">גרסה חדשה זמינה:</span>
@@ -243,7 +240,7 @@ export default function AppUpdateModal({
             </div>
 
             <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-              הגרסה החדשה כוללת שיפורים ותיקונים. ניתן להוריד ולהתקין את קובץ ה-APK ישירות בלחיצה אחת.
+              הגרסה החדשה כוללת שיפורים ותיקונים. ניתן להתקין את הגרסה החדשה בלחיצה אחת.
             </p>
 
             <div className="flex gap-3 pt-2">
@@ -254,16 +251,15 @@ export default function AppUpdateModal({
                 className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-amber-300"
               >
                 <Download className="w-5 h-5" />
-                <span>הורד עכשיו ({apkName})</span>
+                <span>הורד עכשיו</span>
               </button>
               <button
                 tabIndex={0}
                 onClick={onClose}
-                className={`py-3 px-5 rounded-xl font-bold text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400 ${
-                  isDarkMode
-                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                    : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                }`}
+                className={`py-3 px-5 rounded-xl font-bold text-sm transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-gray-400 ${isDarkMode
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300'
+                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  }`}
               >
                 ביטול
               </button>
@@ -287,7 +283,7 @@ export default function AppUpdateModal({
             </div>
 
             <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-              זיכרון המטמון נוקה בהצלחה! הנך משתמש בגרסה העדכנית ביותר מ-GitHub.
+              הזיכרון נוקה בהצלחה! הנך משתמש בגרסה העדכנית ביותר.
             </p>
 
             <div className="flex gap-3 pt-2">
@@ -303,11 +299,10 @@ export default function AppUpdateModal({
                 tabIndex={0}
                 onClick={handleWebReload}
                 title="טען מחדש את הדף עם הזיכרון הנקי"
-                className={`py-3 px-3.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'
-                    : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                }`}
+                className={`py-3 px-3.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
+                  ? 'bg-gray-800 border-gray-700 text-gray-300 hover:text-white'
+                  : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                  }`}
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>רענן דף</span>
@@ -332,7 +327,7 @@ export default function AppUpdateModal({
             </div>
 
             <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-              זיכרון המטמון נוקה בהצלחה. תוכל להמשיך להשתמש באפליקציה, או להוריד את הגרסה האחרונה של ה-APK ידנית.
+              זיכרון המטמון נוקה בהצלחה. תוכל להמשיך להשתמש באפליקציה, או להוריד את הגרסה האחרונה ידנית.
             </p>
 
             <div className="flex gap-3 pt-2">
@@ -340,11 +335,10 @@ export default function AppUpdateModal({
                 ref={primaryBtnRef}
                 tabIndex={0}
                 onClick={onClose}
-                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-colors cursor-pointer ${
-                  isDarkMode
-                    ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                    : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
-                }`}
+                className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-colors cursor-pointer ${isDarkMode
+                  ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                  : 'bg-slate-200 hover:bg-slate-300 text-slate-800'
+                  }`}
               >
                 סגור
               </button>
@@ -354,7 +348,7 @@ export default function AppUpdateModal({
                 className="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm flex items-center gap-1.5 shadow-md active:scale-95 transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>הורד APK בכל זאת</span>
+                <span>הורד בכל זאת</span>
               </button>
             </div>
           </div>
