@@ -775,7 +775,7 @@ export default function ViewMode() {
     .filter(meal => !meal.isNonParticipating)
     .map(meal => {
       const mealVotes = votes.filter(v => v.mealId === meal.id);
-      const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0);
+      const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0) + (meal.pointsAdjustment || 0);
       return { ...meal, score };
     }).sort((a, b) => b.score - a.score);
 

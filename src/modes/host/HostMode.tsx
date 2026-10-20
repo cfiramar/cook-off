@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useFirebaseData, useAllEvents, type Meal, type Guest, type Vote } from '../../hooks/useFirebaseData';
 import { doc, updateDoc, writeBatch, collection, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -322,11 +322,10 @@ function HostModeWithEvent({
     if (res.success) {
       setIsAuthenticated(true);
       sessionStorage.setItem(`host_authed_${eventId}`, 'true');
-      showSuccess('אימות מכשיר הצליח!');
     } else {
       setAuthError(res.error || 'האימות נכשל');
     }
-  }, [eventId, showSuccess]);
+  }, [eventId]);
 
   const [isPinError, setIsPinError] = useState(false);
 
@@ -336,7 +335,6 @@ function HostModeWithEvent({
     if (completedPin === eventInfo.hostPin) {
       setIsAuthenticated(true);
       sessionStorage.setItem(`host_authed_${eventId}`, 'true');
-      showSuccess('ברוך הבא לפאנל המארח');
     } else {
       setIsPinError(true);
       showAlert('קוד PIN שגוי');
@@ -387,23 +385,20 @@ function HostModeWithEvent({
       await updateDoc(doc(db, 'events', eventId), {
         timerStatus: 'running',
         timerEndTime: endTime,
-        timerDuration: duration
+        timerDuration: duration,
+        showStage: 'B'
       });
-      showSuccess(`הטיימר הופעל ל-${timerMinutes} דקות!`);
     } catch (err) {
       console.error(err);
       showAlert('שגיאה בהפעלת הטיימר');
     }
   };
 
+  // Note: if user wants to end the timer, go to the 10 seconds countdown (Stage C) instead of ending right away
   const handleStopTimer = async () => {
     if (!eventInfo || !eventId) return;
     try {
-      await updateDoc(doc(db, 'events', eventId), {
-        timerStatus: 'ended',
-        showMealsCarousel: false
-      });
-      showSuccess('הטיימר נעצר');
+      await handleSetStage('C');
     } catch (err) {
       console.error(err);
       showAlert('שגיאה בעצירת הטיימר');
@@ -419,7 +414,6 @@ function HostModeWithEvent({
         timerEndTime: eventInfo.timerEndTime + additionalMs,
         timerDuration: currentDuration + additionalMs
       });
-      showSuccess(`נוספו ${minutes} דקות לטיימר`);
     } catch (err) {
       console.error(err);
       showAlert('שגיאה בהארכת הזמן');
@@ -434,7 +428,6 @@ function HostModeWithEvent({
       await updateDoc(doc(db, 'events', eventId), {
         showMealsCarousel: nextState
       });
-      showSuccess(nextState ? 'גלריית המנות מוצגת בטלוויזיה 🖼️' : 'גלריית המנות הוסתרה מהטלוויזיה 🙈');
     } catch (err) {
       console.error(err);
       showAlert('שגיאה בעדכון הגדרת גלריית המנות');
@@ -451,10 +444,16 @@ function HostModeWithEvent({
     if (eventInfo.revealState === 'results' || eventInfo.showStage === 'F') return 'F';
     if (eventInfo.revealState === 'emblem' || eventInfo.showStage === 'E') return 'E';
 
+    // Automatic dramatic countdown on last 10s of running timer
+    if (eventInfo.timerStatus === 'running' && timeRemaining !== null && timeRemaining <= 10000 && timeRemaining > 0) {
+      return 'C';
+    }
+
+    if (eventInfo.showStage === 'D') return 'D';
+    if (eventInfo.showStage === 'C') return 'C';
+    if (eventInfo.showStage === 'B') return 'B';
+
     if (eventInfo.timerStatus === 'running') {
-      if (timeRemaining !== null && timeRemaining <= 10000 && timeRemaining > 0) {
-        return 'C';
-      }
       return 'B';
     }
 
@@ -462,6 +461,8 @@ function HostModeWithEvent({
       if (eventInfo.showMealsCarousel === true) return 'A';
       return 'E';
     }
+
+    if (eventInfo.showStage) return eventInfo.showStage;
 
     return 'A';
   };
@@ -538,8 +539,6 @@ function HostModeWithEvent({
       }
 
       await updateDoc(doc(db, 'events', eventId), updatePayload);
-      const targetStage = SHOW_STAGES.find((s) => s.id === stageId);
-      showSuccess(`עברת לשלב: ${targetStage?.name || ''}`);
     } catch (err) {
       console.error(err);
       showAlert('שגיאה בעדכון שלב התחרות');
@@ -549,7 +548,7 @@ function HostModeWithEvent({
   const getNextStageId = (current: 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J'): 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | null => {
     switch (current) {
       case 'A': return 'B';
-      case 'B': return 'E'; // C & D are automatic countdown and ended screens during B
+      case 'B': return eventInfo?.timerStatus === 'running' ? 'C' : 'E';
       case 'C': return 'E';
       case 'D': return 'E';
       case 'E': return 'F';
@@ -610,9 +609,13 @@ function HostModeWithEvent({
     }
   };
 
-  // Find which meal a guest is linked to as a chef
-  const getGuestLinkedMeal = (guestId: string): Meal | undefined => {
-    return meals.find((m) => m.chefIds && m.chefIds.includes(guestId));
+  // Find which meal a guest is linked to as a chef (accounting for direct chefIds, householdChefIds, and out-of-contest meals)
+  const getGuestLinkedMeal = (guest: Guest): Meal | undefined => {
+    return meals.find(
+      (m) =>
+        (m.chefIds && m.chefIds.includes(guest.id)) ||
+        (guest.householdId && m.householdChefIds && m.householdChefIds.includes(guest.householdId))
+    );
   };
 
   // Add new guest
@@ -784,6 +787,20 @@ function HostModeWithEvent({
       });
   }, [activeGuests, voterFilter, voterSearch, votes]);
 
+  // Grouped by household for clean, non-cluttered display without dead-space
+  const householdGroups = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; members: Guest[] }>();
+    for (const guest of filteredGuests) {
+      const hId = guest.householdId || `ind_${guest.id}`;
+      const hName = guest.householdName?.trim() || guest.name;
+      if (!map.has(hId)) {
+        map.set(hId, { id: hId, name: hName, members: [] });
+      }
+      map.get(hId)!.members.push(guest);
+    }
+    return Array.from(map.values());
+  }, [filteredGuests]);
+
   // Chef names resolver for meals: sorted by household name (a-z) and inner order
   const getChefNamesForMeal = (meal: Meal): string[] => {
     return getOrderedChefNamesForMeal(meal, guests);
@@ -795,7 +812,7 @@ function HostModeWithEvent({
       .filter(meal => !meal.isNonParticipating)
       .map(meal => {
         const mealVotes = votes.filter(v => v.mealId === meal.id);
-        const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0);
+        const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0) + (meal.pointsAdjustment || 0);
         const chefs = getChefNamesForMeal(meal);
         return { ...meal, score, chefs, votesCount: mealVotes.length };
       })
@@ -1073,166 +1090,118 @@ function HostModeWithEvent({
             const prevStageDef = prevStageId ? SHOW_STAGES.find((s) => s.id === prevStageId) : null;
 
             return (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                {/* 1. STAGE DIRECTOR HERO BANNER (Shown in all stages) */}
-                <div className={`rounded-3xl p-5 border space-y-3.5 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                  }`}>
-                  {/* Current stage header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl shrink-0">{currentStageDef.icon}</span>
-                      <div>
-                        <div className="text-xs font-bold text-slate-400">שלב נוכחי בטלוויזיה:</div>
-                        <h2 className="text-lg font-black text-blue-600 dark:text-blue-400 leading-tight">
+              <div className="space-y-3.5 animate-in fade-in duration-200">
+                {/* 1. COMPACT STAGE DIRECTOR HEADER */}
+                <div className={`rounded-2xl p-4 border transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className="text-xl shrink-0">{currentStageDef.icon}</span>
+                      <div className="overflow-hidden">
+                        <div className="text-[11px] font-bold text-slate-400">שלב נוכחי בטלוויזיה:</div>
+                        <h2 className="text-base font-extrabold text-blue-600 dark:text-blue-400 truncate leading-tight">
                           {currentStageDef.name}
                         </h2>
                       </div>
                     </div>
                     {currentStageDef.isAutomatic && (
-                      <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold">
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-500 dark:text-slate-400 border border-slate-500/25 font-bold shrink-0">
                         אוטומטי ⚡
                       </span>
                     )}
                   </div>
 
-                  <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {currentStageDef.sub}
-                  </p>
-
-                  {/* Next Step & Next Stage Action Button */}
-                  <div className={`pt-3 border-t flex flex-col gap-2.5 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-                    {nextStageDef ? (
-                      <div className="space-y-2">
-                        <div className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                          <span>השלב הבא:</span>
-                          <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>
-                            {nextStageDef.name} {nextStageDef.icon}
-                          </strong>
-                        </div>
-
-                        <button
-                          onClick={() => handleSetStage(nextStageDef.id)}
-                          className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 active:scale-95 transition-all cursor-pointer"
-                        >
-                          <span>המשך לשלב הבא: {nextStageDef.name}</span>
-                          <ArrowLeft size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="text-center py-1">
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                          הגעת לשלב הסיום של האירוע ✓
-                        </span>
-                      </div>
-                    )}
-
-                    {prevStageDef && (
-                      <button
-                        onClick={() => handleSetStage(prevStageDef.id)}
-                        className={`w-full py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
-                          ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white'
-                          : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                          }`}
-                      >
-                        <ArrowRight size={14} />
-                        <span>חזרה לשלב קודם: {prevStageDef.name}</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Informative stage chips for direct navigation (NO letter codes A, B, C!) */}
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-                    <div className="text-[11px] font-bold text-slate-400 mb-2">מעבר ישיר לשלב:</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SHOW_STAGES.map((stage) => {
-                        const isActive = stage.id === currentStageDef.id;
-                        return (
-                          <button
-                            key={stage.id}
-                            onClick={() => handleSetStage(stage.id)}
-                            className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${isActive
-                              ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/50'
-                              : isDarkMode
-                                ? 'bg-slate-800/70 border border-slate-700/60 text-slate-300 hover:bg-slate-800'
-                                : 'bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200'
-                              }`}
-                          >
-                            <span>{stage.icon}</span>
-                            <span>{stage.name}</span>
-                          </button>
-                        );
-                      })}
+                  {/* Primary Next Stage Action Button */}
+                  {nextStageDef ? (
+                    <button
+                      onClick={() => handleSetStage(nextStageDef.id)}
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] transition-all cursor-pointer"
+                    >
+                      <span>המשך לשלב הבא: {nextStageDef.name}</span>
+                      <ArrowLeft size={16} />
+                    </button>
+                  ) : (
+                    <div className="text-center py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      הגעת לשלב הסיום של האירוע ✓
                     </div>
-                  </div>
+                  )}
+
+                  {prevStageDef && (
+                    <button
+                      onClick={() => handleSetStage(prevStageDef.id)}
+                      className={`w-full mt-2 py-1.5 px-3 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${isDarkMode
+                        ? 'bg-slate-800/60 border-slate-700/60 text-slate-400 hover:text-white'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                    >
+                      <ArrowRight size={13} />
+                      <span>חזרה לשלב קודם: {prevStageDef.name}</span>
+                    </button>
+                  )}
                 </div>
 
-                {/* STAGE A ACTIONS: Show/Hide Gallery + WhatsApp Share */}
-                {currentStageId === 'A' && (
-                  <>
-                    {/* Gallery Toggle */}
-                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                      }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          {isCarouselActive ? <Eye size={20} className="text-emerald-500" /> : <EyeOff size={20} className="text-slate-400" />}
-                          <div>
-                            <h3 className="font-extrabold text-base">גלריית מנות בטלוויזיה</h3>
-                            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isCarouselActive ? 'הגלריה רצה כעת במסך הטלוויזיה' : 'הגלריה מוסתרת כעת מהמסך'}
-                            </p>
-                          </div>
-                        </div>
+                {/* 2. STAGE SPECIFIC CONTROLS */}
 
-                        <button
-                          onClick={handleToggleMealsCarousel}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${isCarouselActive
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
-                            : isDarkMode
-                              ? 'bg-slate-800 text-slate-300 border-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                        >
-                          {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
-                        </button>
+                {/* STAGE A ACTIONS: Gallery Toggle + WhatsApp & Share */}
+                {currentStageId === 'A' && (
+                  <div className="space-y-2.5">
+                    <div className={`rounded-2xl p-3.5 border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        {isCarouselActive ? <Eye size={18} className="text-emerald-500 shrink-0" /> : <EyeOff size={18} className="text-slate-400 shrink-0" />}
+                        <div className="overflow-hidden">
+                          <h3 className="font-bold text-sm truncate">גלריית מנות בטלוויזיה</h3>
+                          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {isCarouselActive ? 'הגלריה רצה במסך' : 'הגלריה מוסתרת'}
+                          </p>
+                        </div>
                       </div>
+
+                      <button
+                        onClick={handleToggleMealsCarousel}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shrink-0 ${isCarouselActive
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                          : isDarkMode
+                            ? 'bg-slate-800 text-slate-300 border-slate-700'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                      >
+                        {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
+                      </button>
                     </div>
 
-                    {/* WhatsApp & Copy Link */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={shareViaWhatsApp}
-                        className="py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
                       >
-                        <Share2 size={16} />
+                        <Share2 size={15} />
                         <span>שליחה בוואטסאפ</span>
                       </button>
                       <button
                         onClick={() => copyToClipboard(voterLink, 'קישור ההצבעה')}
-                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
+                        className={`py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
                           ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
                           : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
                           }`}
                       >
-                        <Copy size={16} />
+                        <Copy size={15} />
                         <span>העתק קישור</span>
                       </button>
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* STAGE B ACTIONS: Set/Start/Extend/Stop Timer, WhatsApp Share, Live Pulse, Notice */}
+                {/* STAGE B ACTIONS: Set/Start/Extend/Stop Timer + Live Pulse */}
                 {currentStageId === 'B' && (
-                  <>
+                  <div className="space-y-3">
                     {/* Timer Card */}
-                    <div className={`rounded-3xl p-5 border relative overflow-hidden transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                      }`}>
-                      <div className="flex items-center justify-between mb-4">
+                    <div className={`rounded-2xl p-4 border relative overflow-hidden transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <Clock size={20} className="text-blue-500" />
-                          <span className="font-extrabold text-lg">טיימר הצבעה</span>
+                          <Clock size={18} className="text-blue-500" />
+                          <span className="font-extrabold text-sm">טיימר הצבעה</span>
                         </div>
 
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full border ${eventInfo.timerStatus === 'running'
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${eventInfo.timerStatus === 'running'
                           ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
                           : eventInfo.timerStatus === 'ended'
                             ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
@@ -1244,86 +1213,84 @@ function HostModeWithEvent({
                         </span>
                       </div>
 
-                      {/* If timer running: countdown + extend + stop */}
+                      {/* If timer running: countdown + extend + stop (to 10s countdown) */}
                       {eventInfo.timerStatus === 'running' ? (
-                        <div className="flex flex-col items-center py-2">
-                          <div className="relative my-2">
-                            <span className={`text-6xl font-black font-mono tracking-tight drop-shadow-sm ${timeRemaining !== null && timeRemaining < 60000 ? 'text-red-500 animate-pulse' : 'text-blue-600 dark:text-blue-400'
-                              }`}>
-                              {timeRemaining !== null ? formatTime(timeRemaining) : '00:00'}
-                            </span>
-                          </div>
+                        <div className="flex flex-col items-center">
+                          <span className={`text-5xl font-black font-mono tracking-tight drop-shadow-sm my-1 ${timeRemaining !== null && timeRemaining < 60000 ? 'text-red-500 animate-pulse' : 'text-blue-600 dark:text-blue-400'
+                            }`}>
+                            {timeRemaining !== null ? formatTime(timeRemaining) : '00:00'}
+                          </span>
 
                           {/* Quick Extend Buttons */}
-                          <div className="grid grid-cols-2 gap-3 w-full my-4">
+                          <div className="grid grid-cols-2 gap-2.5 w-full my-3">
                             <button
                               onClick={() => handleExtendTimer(1)}
-                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${isDarkMode
+                              className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer ${isDarkMode
                                 ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
                                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
                                 }`}
                             >
-                              <Plus size={16} className="text-blue-500" />
-                              <span>דקה אחת (+1)</span>
+                              <Plus size={14} className="text-blue-500" />
+                              <span>דקה (+1)</span>
                             </button>
                             <button
                               onClick={() => handleExtendTimer(5)}
-                              className={`py-3 px-4 rounded-2xl border font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs cursor-pointer ${isDarkMode
+                              className={`py-2 px-3 rounded-xl border font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer ${isDarkMode
                                 ? 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-white'
                                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800'
                                 }`}
                             >
-                              <Plus size={16} className="text-blue-500" />
+                              <Plus size={14} className="text-blue-500" />
                               <span>5 דקות (+5)</span>
                             </button>
                           </div>
 
-                          {/* Stop Timer Button */}
+                          {/* Stop Timer Button (starts 10s countdown) */}
                           <button
                             onClick={handleStopTimer}
-                            className="w-full py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-base flex items-center justify-center gap-2 shadow-md shadow-rose-600/20 active:scale-95 transition-all cursor-pointer"
+                            className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
                           >
-                            <Square size={18} fill="currentColor" />
-                            <span>עצור טיימר מיד</span>
+                            <Square size={14} fill="currentColor" />
+                            <span>סיים טיימר (10 שניות לסיום)</span>
                           </button>
                         </div>
                       ) : (
                         /* Timer idle / ended: stepper + presets + start */
-                        <div className="space-y-4 py-1">
-                          <div className={`flex items-center justify-between rounded-2xl p-3 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                        <div className="space-y-3">
+                          <div className={`flex items-center justify-between rounded-xl p-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
                             }`}>
                             <button
                               onClick={() => setTimerMinutes((m) => Math.max(1, m - 1))}
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
                                 ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
                                 : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
                                 }`}
                             >
-                              <Minus size={20} />
+                              <Minus size={18} />
                             </button>
 
                             <div className="flex flex-col items-center">
-                              <span className="text-4xl font-black font-mono">{timerMinutes}</span>
-                              <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>דקות</span>
+                              <span className="text-3xl font-black font-mono leading-none">{timerMinutes}</span>
+                              <span className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>דקות</span>
                             </div>
 
                             <button
                               onClick={() => setTimerMinutes((m) => m + 1)}
-                              className={`w-12 h-12 rounded-xl flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
+                              className={`w-10 h-10 rounded-lg flex items-center justify-center active:scale-95 transition-all border cursor-pointer ${isDarkMode
                                 ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-white'
                                 : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-800 shadow-xs'
                                 }`}
                             >
-                              <Plus size={20} />
+                              <Plus size={18} />
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-4 gap-1.5">
                             {[3, 5, 10, 15].map((preset) => (
                               <button
                                 key={preset}
                                 onClick={() => setTimerMinutes(preset)}
-                                className={`py-2 rounded-xl font-bold text-xs transition-all border cursor-pointer ${timerMinutes === preset
+                                className={`py-1.5 rounded-lg font-bold text-xs transition-all border cursor-pointer ${timerMinutes === preset
                                   ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                                   : isDarkMode
                                     ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -1337,200 +1304,287 @@ function HostModeWithEvent({
 
                           <button
                             onClick={handleStartTimer}
-                            className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+                            className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
                           >
-                            <Play size={22} fill="currentColor" />
+                            <Play size={18} fill="currentColor" />
                             <span>הפעל טיימר הצבעה</span>
                           </button>
                         </div>
                       )}
                     </div>
 
-                    {/* Live Voting Pulse */}
-                    <div className={`rounded-3xl p-5 border transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                      }`}>
-                      <div className="flex items-center justify-between mb-3">
+                    {/* Compact Live Voting Pulse */}
+                    <div className={`rounded-2xl p-3.5 border ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Users size={20} className="text-emerald-500" />
-                          <span className="font-extrabold text-lg">קצב הצבעה בלייב</span>
+                          <Users size={16} className="text-emerald-500" />
+                          <span className="font-bold text-sm">התקדמות הצבעה</span>
                         </div>
-                        <button
-                          onClick={() => setCurrentTab('voters')}
-                          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>לרשימת המשתתפים</span>
-                          <ChevronRight size={14} className="rotate-180" />
-                        </button>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                          {doneGuests} / {totalGuests} ({progressPercent}%)
+                        </span>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-baseline text-sm">
-                          <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>
-                            סיימו להצביע: <strong className={isDarkMode ? 'text-white' : 'text-slate-900 font-bold'}>{doneGuests}</strong> מתוך <span className="font-mono">{totalGuests}</span>
-                          </span>
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-base">
-                            {progressPercent}%
-                          </span>
-                        </div>
-
-                        <div className={`w-full h-3 rounded-full border overflow-hidden p-0.5 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-                          }`}>
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
+                      <div className={`w-full h-2 rounded-full border overflow-hidden p-0.5 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'}`}>
+                        <div
+                          className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                          style={{ width: `${progressPercent}%` }}
+                        />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 text-center">
-                        <div className={`rounded-xl p-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                          <span className={`block text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>סיימו</span>
-                          <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">{doneGuests}</span>
+                      <div className="grid grid-cols-3 gap-2 mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 text-center text-xs">
+                        <div>
+                          <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>סיימו: </span>
+                          <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{doneGuests}</strong>
                         </div>
-                        <div className={`rounded-xl p-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                          <span className={`block text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>מצביעים</span>
-                          <span className="text-lg font-bold text-amber-500 font-mono">{votingGuests}</span>
+                        <div>
+                          <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>מצביעים: </span>
+                          <strong className="text-amber-500 font-mono">{votingGuests}</strong>
                         </div>
-                        <div className={`rounded-xl p-2 border ${isDarkMode ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-                          <span className={`block text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ממתינים</span>
-                          <span className={`text-lg font-bold font-mono ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>{pendingGuests}</span>
+                        <div>
+                          <span className={isDarkMode ? 'text-slate-400' : 'text-slate-500'}>ממתינים: </span>
+                          <strong className={isDarkMode ? 'text-slate-300 font-mono' : 'text-slate-600 font-mono'}>{pendingGuests}</strong>
                         </div>
                       </div>
                     </div>
 
                     {/* WhatsApp & Copy Link */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5">
                       <button
                         onClick={shareViaWhatsApp}
-                        className="py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
                       >
-                        <Share2 size={16} />
+                        <Share2 size={15} />
                         <span>שליחה בוואטסאפ</span>
                       </button>
                       <button
                         onClick={() => copyToClipboard(voterLink, 'קישור ההצבעה')}
-                        className={`py-3.5 px-4 rounded-2xl border font-semibold text-sm flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
+                        className={`py-2.5 px-3 rounded-xl border font-semibold text-xs flex items-center justify-center gap-2 shadow-xs active:scale-95 transition-all cursor-pointer ${isDarkMode
                           ? 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-white'
                           : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-800'
                           }`}
                       >
-                        <Copy size={16} />
+                        <Copy size={15} />
                         <span>העתק קישור</span>
                       </button>
                     </div>
-
-                    {/* Informative Note regarding C and D being automatic */}
-                    <div className={`p-4 rounded-2xl border flex items-start gap-3 ${isDarkMode ? 'bg-blue-500/10 border-blue-500/20 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-800'
-                      }`}>
-                      <Sparkles size={18} className="shrink-0 mt-0.5 text-blue-400" />
-                      <p className="text-xs leading-relaxed">
-                        <strong>השלבים הבאים יפעלו אוטומטית:</strong> ב-10 השניות האחרונות לטיימר תופעל בטלוויזיה ספירה לאחור דרמטית עם רעד מסך, ומיד לאחריה תופיע הודעת סיום הזמן (00:00).
-                      </p>
-                    </div>
-                  </>
+                  </div>
                 )}
 
-                {/* STAGE C & D: Automatic Stages */}
+                {/* STAGE C & D: Automatic Stages (Clean compact banner) */}
                 {(currentStageId === 'C' || currentStageId === 'D') && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}>
-                    <div className="w-14 h-14 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-2xl">
-                      {currentStageId === 'C' ? '⚡' : '🛑'}
-                    </div>
-                    <h3 className="text-xl font-black">
-                      {currentStageId === 'C' ? '10 שניות אחרונות לסיום ההצבעה' : 'זמן ההצבעה הסתיים!'}
-                    </h3>
-                    <p className={`text-xs max-w-xs mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {currentStageId === 'C'
-                        ? 'הטלוויזיה מציגה כעת שעון ענק וספירה לאחור דרמטית עם רעד מסך בכל שנייה.'
-                        : 'הטלוויזיה מציגה כעת את הודעת סיום הזמן (00:00). ההצבעות נסגרו.'}
-                    </p>
-                    <div className="text-[11px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded-xl py-2 px-3 inline-block">
-                      שלב זה מבוצע אוטומטית לחלוטין בטלוויזיה ⚡
-                    </div>
-                  </div>
-                )}
-
-                {/* STAGE E: Emblem + Flavor Text (no action needed) */}
-                {currentStageId === 'E' && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}>
-                    <div className="w-16 h-16 rounded-2xl bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center justify-center mx-auto text-3xl">
-                      ✨
-                    </div>
-                    <h3 className="text-xl font-black">סמל התחרות ומשפטי אווירה</h3>
-                    <p className={`text-xs max-w-sm mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                      בטלוויזיה מוצג כעת סמל התחרות התלת-ממדי לצד משפטי אווירה מתחלפים כדי לבנות מתח וציפייה בקהל לקראת התוצאות.
-                    </p>
-                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      לא נדרשת פעולה בשלב זה. לחץ על הכפתור למעלה כדי לפתוח את שלב התוצאות.
-                    </p>
-                  </div>
-                )}
-
-                {/* STAGES F, G, H, I: Results and Podium reveals (no actions needed) */}
-                {(currentStageId === 'F' || currentStageId === 'G' || currentStageId === 'H' || currentStageId === 'I') && (
-                  <div className={`rounded-3xl p-6 border text-center space-y-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                    }`}>
-                    <div className="w-16 h-16 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center mx-auto text-3xl">
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 text-xl">
                       {currentStageDef.icon}
                     </div>
-                    <h3 className="text-xl font-black">{currentStageDef.name}</h3>
-                    <p className={`text-xs max-w-sm mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                      {currentStageId === 'F' && 'מסך פתיחת התוצאות הרשמי מוצג כעת בטלוויזיה לקראת חשיפת המנצחים!'}
-                      {currentStageId === 'G' && `מקום שלישי נחשף כעת על הפודיום בטלוויזיה (${top3[2]?.name || 'מנה'}).`}
-                      {currentStageId === 'H' && `מקום שני נחשף כעת על הפודיום בטלוויזיה (${top3[1]?.name || 'מנה'}).`}
-                      {currentStageId === 'I' && `המנצח הגדול ומקום ראשון נחשף על ראש הפודיום (${top3[0]?.name || 'מנה'}) עם קונפטי חגיגי!`}
-                    </p>
-                    <p className={`text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                      לא נדרשת פעולה בשלב זה. עבור לשלב הבא באמצעות הכפתור למעלה.
-                    </p>
-                  </div>
-                )}
-
-                {/* STAGE J: Background Only + Show/Hide Gallery */}
-                {currentStageId === 'J' && (
-                  <div className="space-y-4">
-                    <div className={`rounded-3xl p-6 border text-center space-y-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-                      }`}>
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center mx-auto text-3xl">
-                        🌌
-                      </div>
-                      <h3 className="text-xl font-black">רקע אווירה וסיום המופע</h3>
-                      <p className={`text-xs max-w-sm mx-auto leading-relaxed ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>
-                        בטלוויזיה מוצגת תמונת רקע נקייה ללא כרטיסים או טקסטים.
+                    <div>
+                      <h3 className="text-sm font-bold">
+                        {currentStageId === 'C' ? '10 שניות אחרונות לסיום ההצבעה' : 'זמן ההצבעה הסתיים (00:00)'}
+                      </h3>
+                      <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {currentStageId === 'C'
+                          ? 'בטלוויזיה מוצג שעון ענק וספירה לאחור דרמטית עם רעד מסך.'
+                          : 'בטלוויזיה מוצגת הודעת סיום הזמן. ההצבעות נסגרו.'}
                       </p>
                     </div>
+                  </div>
+                )}
 
-                    {/* Show/Hide Gallery in Stage J */}
-                    <div className={`rounded-3xl p-5 border space-y-3 transition-all ${isDarkMode ? 'bg-slate-900/80 border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-sm'
-                      }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          {isCarouselActive ? <Eye size={20} className="text-emerald-500" /> : <EyeOff size={20} className="text-slate-400" />}
-                          <div>
-                            <h3 className="font-extrabold text-base">גלריית מנות על רקע מוחשך</h3>
-                            <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                              {isCarouselActive ? 'הגלריה מוצגת כעת מעל הרקע המוחשך' : 'הרקע מוצג נקי ללא גלריה'}
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={handleToggleMealsCarousel}
-                          className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer ${isCarouselActive
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
-                            : isDarkMode
-                              ? 'bg-slate-800 text-slate-300 border-slate-700'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
-                        >
-                          {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
-                        </button>
-                      </div>
+                {/* STAGE E: Emblem + Atmosphere */}
+                {currentStageId === 'E' && (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center justify-center shrink-0 text-xl">
+                      ✨
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold">סמל התחרות ומשפטי אווירה</h3>
+                      <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        סמל 3D ומשפטי אווירה מוצגים כעת בטלוויזיה ליצירת מתח וציפייה לתוצאות.
+                      </p>
                     </div>
                   </div>
                 )}
+
+                {/* STAGE F: Opening Results */}
+                {currentStageId === 'F' && (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 text-xl">
+                      📜
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold">מסך פתיחת התוצאות</h3>
+                      <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        הכרזה רשמית ופתיחת מסך התוצאות בטלוויזיה לקראת חשיפת הפודיום.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STAGE G: 3rd Place Reveal */}
+                {currentStageId === 'G' && (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 text-xl">
+                      🥉
+                    </div>
+                    <div className="overflow-hidden">
+                      <h3 className="text-sm font-bold">חשיפת מקום שלישי</h3>
+                      <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        מוצגת כעת: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{top3[2]?.name || 'מנה'}</strong>
+                        {top3[2]?.chefs.length ? ` (${top3[2].chefs.join(', ')})` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STAGE H: 2nd Place Reveal */}
+                {currentStageId === 'H' && (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 text-xl">
+                      🥈
+                    </div>
+                    <div className="overflow-hidden">
+                      <h3 className="text-sm font-bold">חשיפת מקום שני</h3>
+                      <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        מוצגת כעת: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{top3[1]?.name || 'מנה'}</strong>
+                        {top3[1]?.chefs.length ? ` (${top3[1].chefs.join(', ')})` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STAGE I: 1st Place Winner Announcement */}
+                {currentStageId === 'I' && (
+                  <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0 text-xl">
+                      🥇
+                    </div>
+                    <div className="overflow-hidden">
+                      <h3 className="text-sm font-bold">הכרזת המנצח (מקום 1) 🎉</h3>
+                      <p className={`text-xs mt-0.5 truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        המנצח הגדול: <strong className={isDarkMode ? 'text-white' : 'text-slate-900'}>{top3[0]?.name || 'מנה'}</strong>
+                        {top3[0]?.chefs.length ? ` (${top3[0].chefs.join(', ')})` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* STAGE J: Background & Wrap-Up */}
+                {currentStageId === 'J' && (
+                  <div className="space-y-2.5">
+                    <div className={`rounded-2xl p-4 border flex items-center gap-3.5 ${isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xs'}`}>
+                      <div className="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 text-xl">
+                        🌌
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold">רקע אווירה וסיום המופע</h3>
+                        <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                          בטלוויזיה מוצגת תמונת רקע נקייה לסיום האירוע.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className={`rounded-2xl p-3.5 border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        {isCarouselActive ? <Eye size={18} className="text-emerald-500 shrink-0" /> : <EyeOff size={18} className="text-slate-400 shrink-0" />}
+                        <div className="overflow-hidden">
+                          <h3 className="font-bold text-sm truncate">גלריית מנות על רקע מוחשך</h3>
+                          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {isCarouselActive ? 'הגלריה מוצגת מעל הרקע' : 'הרקע מוצג נקי'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleToggleMealsCarousel}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 cursor-pointer shrink-0 ${isCarouselActive
+                          ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-500/30'
+                          : isDarkMode
+                            ? 'bg-slate-800 text-slate-300 border-slate-700'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                      >
+                        {isCarouselActive ? 'הסתר גלריה' : 'הצג גלריה'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. NEAT TIME-LINE OF ALL STAGES AT END OF SCREEN */}
+                <div className={`rounded-2xl p-4 border space-y-2.5 ${isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-bold text-slate-400">ציר זמן שלבי האירוע:</div>
+                    <span className="text-[11px] text-slate-400">לחץ למעבר ישיר</span>
+                  </div>
+
+                  <div className="relative pr-1.5">
+                    {/* Vertical Connecting Track Line in RTL */}
+                    <div className={`absolute right-[19px] top-3 bottom-3 w-0.5 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />
+
+                    <div className="space-y-1 relative">
+                      {SHOW_STAGES.map((stage, idx) => {
+                        const isCurrent = stage.id === currentStageDef.id;
+                        const currentIdx = SHOW_STAGES.findIndex(s => s.id === currentStageDef.id);
+                        const isCompleted = idx < currentIdx;
+                        const isAuto = !!stage.isAutomatic;
+
+                        return (
+                          <button
+                            key={stage.id}
+                            onClick={() => handleSetStage(stage.id)}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-right transition-all cursor-pointer ${
+                              isCurrent
+                                ? isDarkMode
+                                  ? 'bg-blue-600/20 border border-blue-500/40 text-blue-300 shadow-xs font-bold'
+                                  : 'bg-blue-50 border border-blue-200 text-blue-900 shadow-xs font-bold'
+                                : isAuto
+                                  ? isDarkMode
+                                    ? 'text-slate-500 hover:text-slate-400 hover:bg-slate-800/30 opacity-60'
+                                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 opacity-60'
+                                  : isDarkMode
+                                    ? 'text-slate-300 hover:bg-slate-800/50 hover:text-white'
+                                    : 'text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 relative z-10 overflow-hidden">
+                              {/* Step circle node */}
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 font-bold ${
+                                isCurrent
+                                  ? 'bg-blue-600 text-white ring-4 ring-blue-500/20'
+                                  : isCompleted
+                                    ? 'bg-emerald-500 text-white'
+                                    : isAuto
+                                      ? isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-500' : 'bg-slate-100 border border-slate-300 text-slate-400'
+                                      : isDarkMode ? 'bg-slate-800 border border-slate-700 text-slate-300' : 'bg-slate-100 border border-slate-300 text-slate-600'
+                              }`}>
+                                {isCompleted ? '✓' : idx + 1}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 overflow-hidden">
+                                <span className="text-xs shrink-0">{stage.icon}</span>
+                                <span className={`text-xs truncate ${isCurrent ? 'font-black' : isAuto ? 'font-normal italic' : 'font-semibold'}`}>
+                                  {stage.name}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex items-center gap-1.5 text-[11px] font-mono mr-2">
+                              {isCurrent && (
+                                <span className="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[10px] font-bold">
+                                  כעת
+                                </span>
+                              )}
+                              {isAuto && (
+                                <span className={`text-[10px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                  (אוטומטי)
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             );
           })()}
@@ -1637,91 +1691,131 @@ function HostModeWithEvent({
                 </div>
               </div>
 
-              {/* Guest Cards List */}
-              <div className="space-y-2.5">
-                {filteredGuests.map((guest) => {
-                  const status = getGuestStatus(guest);
-                  const linkedMeal = getGuestLinkedMeal(guest.id);
+              {/* Grouped Household Cards List */}
+              <div className="space-y-2">
+                {householdGroups.map((hh) => {
+                  const isMulti = hh.members.length > 1;
 
                   return (
                     <div
-                      key={guest.id}
-                      className={`rounded-2xl p-3.5 flex items-center justify-between gap-3 border transition-all ${isDarkMode
-                        ? 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
-                        : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
-                        }`}
+                      key={hh.id}
+                      className={`rounded-2xl border overflow-hidden transition-all ${
+                        isDarkMode
+                          ? 'bg-slate-900/70 border-slate-800'
+                          : 'bg-white border-slate-200 shadow-xs'
+                      }`}
                     >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${status === 'done'
-                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
-                          : status === 'voting'
-                            ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
-                            : isDarkMode
-                              ? 'bg-slate-800 border-slate-700 text-slate-400'
-                              : 'bg-slate-100 border-slate-200 text-slate-500'
-                          }`}>
-                          {status === 'done' ? (
-                            <CheckCircle2 size={20} />
-                          ) : status === 'voting' ? (
-                            <Flame size={20} className="animate-bounce" />
-                          ) : (
-                            <Clock size={20} />
-                          )}
-                        </div>
-
-                        <div className="overflow-hidden">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-base leading-tight truncate">
-                              {guest.name}
-                            </span>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2 mt-1">
-                            {/* PIN Code Badge */}
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md border ${isDarkMode ? 'bg-slate-950 border-slate-800 text-slate-300' : 'bg-slate-100 border-slate-200 text-slate-700'
-                              }`}>
-                              <KeyRound size={11} className="text-amber-500" />
-                              <span>PIN: {guest.pin || '----'}</span>
-                            </span>
-
-                            {/* Linked Meal Badge */}
-                            {linkedMeal ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 truncate max-w-[170px]">
-                                <span>🍽️</span>
-                                <span className="truncate">{linkedMeal.name}</span>
-                              </span>
-                            ) : (
-                              <span className={`text-[11px] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                                ללא מנה
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status & Edit Button */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`px-2.5 py-1 rounded-xl text-xs font-bold border ${status === 'done'
-                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                          : status === 'voting'
-                            ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                            : isDarkMode
-                              ? 'bg-slate-800 text-slate-400 border-slate-700'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                          {status === 'done' ? 'הצביע' : status === 'voting' ? 'מצביע' : 'ממתין'}
-                        </span>
-
-                        <button
-                          onClick={() => setEditingGuest(guest)}
-                          className={`p-2 rounded-xl border transition-colors cursor-pointer ${isDarkMode
-                            ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-750'
-                            : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
-                            }`}
-                          title="ערוך משתתף, PIN ושיוך למנה"
+                      {/* Slim household header when household has multiple members */}
+                      {isMulti && (
+                        <div
+                          className={`px-3.5 py-1.5 flex items-center justify-between border-b text-xs font-bold ${
+                            isDarkMode
+                              ? 'bg-slate-800/40 border-slate-800 text-slate-300'
+                              : 'bg-slate-50 border-slate-100 text-slate-600'
+                          }`}
                         >
-                          <Edit3 size={15} />
-                        </button>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-400">🏠</span>
+                            <span>{hh.name}</span>
+                          </div>
+                          <span className="text-[11px] font-normal text-slate-400 font-mono">
+                            {hh.members.length} משתתפים
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Member rows */}
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        {hh.members.map((guest) => {
+                          const status = getGuestStatus(guest);
+                          const linkedMeal = getGuestLinkedMeal(guest);
+
+                          return (
+                            <div
+                              key={guest.id}
+                              className="p-3 flex items-center justify-between gap-2.5 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/30"
+                            >
+                              <div className="flex items-center gap-2.5 overflow-hidden">
+                                <div
+                                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border ${
+                                    status === 'done'
+                                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-500'
+                                      : status === 'voting'
+                                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-500'
+                                        : isDarkMode
+                                          ? 'bg-slate-800 border-slate-700 text-slate-400'
+                                          : 'bg-slate-100 border-slate-200 text-slate-500'
+                                  }`}
+                                >
+                                  {status === 'done' ? (
+                                    <CheckCircle2 size={16} />
+                                  ) : status === 'voting' ? (
+                                    <Flame size={16} className="animate-bounce" />
+                                  ) : (
+                                    <Clock size={16} />
+                                  )}
+                                </div>
+
+                                <div className="overflow-hidden">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-sm leading-tight truncate">
+                                      {guest.name}
+                                    </span>
+                                    {linkedMeal && (
+                                      <span
+                                        className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 cursor-help shrink-0"
+                                        title={`מנה מקושרת: ${linkedMeal.name}${linkedMeal.isNonParticipating ? ' (מחוץ לתחרות)' : ''}`}
+                                      >
+                                        🍽️
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-slate-400">
+                                    <span className="flex items-center gap-1">
+                                      <KeyRound size={11} className="text-amber-500 shrink-0" />
+                                      <span>PIN: {guest.pin || '----'}</span>
+                                    </span>
+                                    {!isMulti && guest.householdName && guest.householdName !== guest.name && (
+                                      <span className="truncate text-slate-400 font-sans">
+                                        • {guest.householdName}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Status & Edit Button */}
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span
+                                  className={`px-2 py-0.5 rounded-lg text-xs font-bold border ${
+                                    status === 'done'
+                                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                      : status === 'voting'
+                                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                                        : isDarkMode
+                                          ? 'bg-slate-800 text-slate-400 border-slate-700'
+                                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                                  }`}
+                                >
+                                  {status === 'done' ? 'הצביע' : status === 'voting' ? 'מצביע' : 'ממתין'}
+                                </span>
+
+                                <button
+                                  onClick={() => setEditingGuest(guest)}
+                                  className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                    isDarkMode
+                                      ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-750'
+                                      : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+                                  }`}
+                                  title="ערוך משתתף"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -2107,6 +2201,7 @@ function HostModeWithEvent({
 
         {/* --- MEAL VOTES BREAKDOWN MODAL (Results Tab) --- */}
         <MealVotesModal
+          eventId={eventId || ''}
           meal={selectedMealForVotes}
           votes={votes}
           guests={guests}
@@ -2518,12 +2613,14 @@ function ManageMealsModal({
  * Meal Votes Modal Component (Results Tab: Details of who voted and ranking)
  */
 function MealVotesModal({
+  eventId,
   meal,
   votes,
   guests,
   onClose,
   isDarkMode,
 }: {
+  eventId: string;
   meal: (Meal & { score: number; chefs: string[]; votesCount: number }) | null;
   votes: Vote[];
   guests: Guest[];
@@ -2535,6 +2632,33 @@ function MealVotesModal({
   const mealVotes = votes.filter((v) => v.mealId === meal.id);
   const firstPlaceVotes = mealVotes.filter((v) => v.points === 3);
   const secondPlaceVotes = mealVotes.filter((v) => v.points === 2);
+  const baseVotesScore = useMemo(() => {
+    return mealVotes.reduce((sum, v) => sum + (v.points || 0), 0);
+  }, [mealVotes]);
+
+  const [showSecretEditor, setShowSecretEditor] = useState(false);
+  const [targetScore, setTargetScore] = useState<number>(meal.score);
+  const [isSaving, setIsSaving] = useState(false);
+  const clicksCountRef = useRef(0);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setTargetScore(meal.score);
+  }, [meal.score, meal.id]);
+
+  const handleImageClick = () => {
+    clicksCountRef.current += 1;
+    if (clicksCountRef.current >= 4) {
+      clicksCountRef.current = 0;
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      setShowSecretEditor(true);
+      return;
+    }
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clicksCountRef.current = 0;
+    }, 1500);
+  };
 
   return (
     <div
@@ -2549,17 +2673,23 @@ function MealVotesModal({
         {/* Header with image */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            {meal.imageUrl ? (
-              <img
-                src={meal.imageUrl}
-                alt={meal.name}
-                className="w-14 h-14 rounded-2xl object-cover shrink-0 border border-black/10"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/15 flex items-center justify-center text-2xl shrink-0">
-                🍽️
-              </div>
-            )}
+            <div
+              onClick={handleImageClick}
+              className="relative cursor-pointer active:scale-95 transition-transform shrink-0 select-none group"
+              title="תמונת המנה (לחיצה מרובעת מפעילה עריכת ניקוד סודית)"
+            >
+              {meal.imageUrl ? (
+                <img
+                  src={meal.imageUrl}
+                  alt={meal.name}
+                  className="w-14 h-14 rounded-2xl object-cover shrink-0 border border-black/10 group-hover:opacity-90"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/15 flex items-center justify-center text-2xl shrink-0 group-hover:bg-amber-500/25">
+                  🍽️
+                </div>
+              )}
+            </div>
             <div className="overflow-hidden">
               <h3 className="text-base font-extrabold truncate">{meal.name}</h3>
               {meal.chefs.length > 0 && (
@@ -2571,6 +2701,11 @@ function MealVotesModal({
                 <span className="text-xs font-black text-blue-600 dark:text-blue-400 font-mono">
                   {meal.score} נקודות
                 </span>
+                {meal.pointsAdjustment ? (
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
+                    {meal.pointsAdjustment > 0 ? `+${meal.pointsAdjustment}` : meal.pointsAdjustment} התאמה
+                  </span>
+                ) : null}
                 <span className="text-xs text-slate-400 font-mono">• {mealVotes.length} מצביעים</span>
               </div>
             </div>
@@ -2579,6 +2714,123 @@ function MealVotesModal({
             <X size={20} />
           </button>
         </div>
+
+        {/* Secret Points Adjustment Editor */}
+        {showSecretEditor && (
+          <div className={`p-3 rounded-2xl border space-y-2.5 mt-3 animate-in fade-in duration-150 ${
+            isDarkMode ? 'bg-amber-950/20 border-amber-500/40 text-amber-200' : 'bg-amber-50 border-amber-300 text-amber-950'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-xs">
+                <Sparkles size={14} className="text-amber-500 shrink-0" />
+                <span>עריכת ניקוד סופי למנה (עבור המארח)</span>
+              </div>
+              <button
+                onClick={() => setShowSecretEditor(false)}
+                className="p-1 rounded hover:bg-black/10 text-slate-400 cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between text-xs px-1">
+              <span>הצבעות אורחים: <strong className="font-mono">{baseVotesScore}</strong></span>
+              <span>
+                התאמה (בונוס/קנס):{' '}
+                <strong className="font-mono">
+                  {(targetScore - baseVotesScore) > 0 ? `+${targetScore - baseVotesScore}` : (targetScore - baseVotesScore)}
+                </strong>
+              </span>
+            </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => setTargetScore((prev) => prev - 5)}
+                className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold hover:bg-black/5 active:scale-95 cursor-pointer"
+              >
+                -5
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetScore((prev) => prev - 1)}
+                className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold hover:bg-black/5 active:scale-95 cursor-pointer"
+              >
+                -1
+              </button>
+              <input
+                type="number"
+                value={targetScore}
+                onChange={(e) => setTargetScore(Number(e.target.value))}
+                className={`w-20 text-center font-mono font-extrabold text-base py-1 rounded-lg border ${
+                  isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setTargetScore((prev) => prev + 1)}
+                className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold hover:bg-black/5 active:scale-95 cursor-pointer"
+              >
+                +1
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetScore((prev) => prev + 5)}
+                className="px-2.5 py-1 rounded-lg border text-xs font-mono font-bold hover:bg-black/5 active:scale-95 cursor-pointer"
+              >
+                +5
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={async () => {
+                  if (!eventId) return;
+                  setIsSaving(true);
+                  try {
+                    await updateDoc(doc(db, 'events', eventId, 'meals', meal.id), {
+                      pointsAdjustment: 0
+                    });
+                    setTargetScore(baseVotesScore);
+                    setShowSecretEditor(false);
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg border text-xs font-medium hover:bg-black/5 cursor-pointer"
+              >
+                איפוס
+              </button>
+
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={async () => {
+                  if (!eventId) return;
+                  setIsSaving(true);
+                  try {
+                    const adjustment = Number(targetScore) - baseVotesScore;
+                    await updateDoc(doc(db, 'events', eventId, 'meals', meal.id), {
+                      pointsAdjustment: adjustment
+                    });
+                    setShowSecretEditor(false);
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }}
+                className="px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-sm cursor-pointer"
+              >
+                {isSaving ? 'שומר...' : 'שמור ניקוד'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Votes Summary Pills */}
         <div className="grid grid-cols-2 gap-2 pt-3">

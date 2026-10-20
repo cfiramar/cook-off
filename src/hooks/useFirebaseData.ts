@@ -68,6 +68,7 @@ export interface Meal {
   chefIds: string[];
   householdChefIds?: string[];
   isNonParticipating?: boolean;
+  pointsAdjustment?: number;
 }
 
 export interface Vote {

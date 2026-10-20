@@ -20,7 +20,7 @@ export default function ResultsDashboard({ meals, votes }: Props) {
   // Calculate scores for each participating meal
   const mealScores = participatingMeals.map(meal => {
     const mealVotes = votes.filter(v => v.mealId === meal.id);
-    const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0);
+    const score = mealVotes.reduce((sum, vote) => sum + vote.points, 0) + (meal.pointsAdjustment || 0);
     const firstPlaceVotes = mealVotes.filter(v => v.points === 3).length;
     const secondPlaceVotes = mealVotes.filter(v => v.points === 2).length;
     const thirdPlaceVotes = mealVotes.filter(v => v.points === 1).length;

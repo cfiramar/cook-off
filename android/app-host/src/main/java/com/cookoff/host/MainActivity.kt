@@ -113,7 +113,40 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        webView.setDownloadListener { url, _, _, _, _ ->
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView?,
+                request: WebResourceRequest?
+            ): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.endsWith(".apk", ignoreCase = true) ||
+                    url.contains("/releases/download/", ignoreCase = true) ||
+                    url.contains("/releases/latest/download/", ignoreCase = true)
+                ) {
+                    return try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+                }
+                return false
+            }
+
             override fun onReceivedError(
                 view: WebView?,
                 request: WebResourceRequest?,
@@ -211,6 +244,25 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun authenticateBiometric() {
             authenticateBiometrics()
+        }
+
+        @JavascriptInterface
+        fun openExternalUrl(url: String) {
+            runOnUiThread {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun downloadApk(url: String) {
+            openExternalUrl(url)
         }
     }
 

@@ -14,7 +14,7 @@ export interface AppUpdateModalProps {
   isDarkMode?: boolean;
 }
 
-export const APP_CURRENT_VERSION = 'v1.1.0';
+export const APP_CURRENT_VERSION = 'v1.1.1';
 
 /**
  * Compare semantic versions like "v1.0.5" vs "v1.0.4".
@@ -148,14 +148,53 @@ export default function AppUpdateModal({
 
   const handleDownload = () => {
     const downloadUrl = resolvedDownloadUrl || apkDownloadUrl;
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = apkName;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // Check for native app bridge (Host app or TV app)
+    const hostBridge = (window as any).HostNativeApp || (window as any).AndroidHostApp;
+    if (hostBridge && typeof hostBridge.openExternalUrl === 'function') {
+      try {
+        hostBridge.openExternalUrl(downloadUrl);
+        onClose();
+        return;
+      } catch (err) {
+        console.warn('Native host download bridge failed, falling back:', err);
+      }
+    }
+
+    const tvBridge = (window as any).TvNativeApp || (window as any).AndroidTvApp;
+    if (tvBridge && typeof tvBridge.openExternalUrl === 'function') {
+      try {
+        tvBridge.openExternalUrl(downloadUrl);
+        onClose();
+        return;
+      } catch (err) {
+        console.warn('Native TV download bridge failed, falling back:', err);
+      }
+    }
+
+    // Try standard link click
+    try {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = apkName;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      // Fallback below
+    }
+
+    // WebView fallback: trigger navigation directly so DownloadListener or browser intercept catches it
+    setTimeout(() => {
+      try {
+        window.location.href = downloadUrl;
+      } catch {
+        // Ignore
+      }
+    }, 100);
+
     onClose();
   };
 
